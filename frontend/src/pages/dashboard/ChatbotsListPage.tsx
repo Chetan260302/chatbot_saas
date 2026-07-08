@@ -246,7 +246,7 @@ export default function ChatbotsListPage() {
                 <Card
                   key={bot.id}
                   hoverable
-                  onClick={() => navigate(`/dashboard/chatbots/${bot.id}`)}
+                  onClick={() => navigate(`/dashboard/chatbots/${bot.slug || bot.id}`)}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',

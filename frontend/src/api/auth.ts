@@ -27,25 +27,47 @@ export interface UserProfile {
   is_active: boolean
 }
 
+export interface RegisterResponse {
+  status: string
+  message: string
+  dev_verification_url?: string
+}
+
 export const authAPI={
     // Register endpoint (should be public)
     register: async (data: RegisterPayload) => {
-        const response = await apiClient.post<TokenResponse>('auth/register', data)
+        const response = await apiClient.post<RegisterResponse>('/auth/register', data)
         return response.data
     },
     // Login endpoint (public, no auth token needed)
     login: async (data: LoginPayload) => {
-        const response = await apiClient.post<TokenResponse>('auth/login', data)
+        const response = await apiClient.post<TokenResponse>('/auth/login', data)
         return response.data
     },
     // Test endpoint – needs token (auth middleware will protect)
     getMe: async () => {
-        const response = await apiClient.get<UserProfile>('auth/me')
+        const response = await apiClient.get<UserProfile>('/auth/me')
         return response.data
     },
     // Get tenant details including API key
     getTenantMe: async () => {
-        const response = await apiClient.get<{ id: string; name: string; api_key: string; plan: string }>('auth/tenant/me')
+        const response = await apiClient.get<{ id: string; name: string; api_key: string; plan: string }>('/auth/tenant/me')
+        return response.data
+    },
+    changePassword: async (data: any) => {
+        const response = await apiClient.post('/auth/change-password', data)
+        return response.data
+    },
+    forgotPassword: async (email: string) => {
+        const response = await apiClient.post('/auth/forgot-password', { email })
+        return response.data
+    },
+    resetPassword: async (data: any) => {
+        const response = await apiClient.post('/auth/reset-password', data)
+        return response.data
+    },
+    verifyEmail: async (token: string) => {
+        const response = await apiClient.post('/auth/verify-email', { token })
         return response.data
     },
 
@@ -53,7 +75,11 @@ export const authAPI={
     logout: async () => {
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
-        // localStorage.removeItem('user_profile')
+        localStorage.removeItem('user_profile')
+        localStorage.removeItem('remember_me')
+        sessionStorage.removeItem('access_token')
+        sessionStorage.removeItem('refresh_token')
+        sessionStorage.removeItem('user_profile')
     },
 }
     

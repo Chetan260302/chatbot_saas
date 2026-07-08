@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { authAPI }      from '../api/auth'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
-
 import { AuthLayout, FormField, ErrorBanner, SubmitButton } from './components/AuthLayout'
 
 export default function LoginPage() {
@@ -14,6 +13,7 @@ export default function LoginPage() {
   const { theme }  = useThemeStore()
 
   const [form,    setForm]    = useState({ email: '', password: '' })
+  const [rememberMe, setRememberMe] = useState(true)
   const [error,   setError]   = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -37,10 +37,13 @@ export default function LoginPage() {
         email:    form.email,
         password: form.password,
       })
-      // Set token first so the /me call is authorized
-      localStorage.setItem('access_token', tokens.access_token)
+      // Save tokens to storage first so the getMe API request is authorized
+      const storage = rememberMe ? localStorage : sessionStorage
+      storage.setItem('access_token', tokens.access_token)
+      storage.setItem('refresh_token', tokens.refresh_token)
+
       const user = await authAPI.getMe()
-      setAuth(tokens.access_token, tokens.refresh_token, user)
+      setAuth(tokens.access_token, tokens.refresh_token, user, rememberMe)
       navigate('/dashboard', { replace: true })
     } catch (err: any) {
       const msg = err.response?.data?.detail
@@ -79,11 +82,39 @@ export default function LoginPage() {
           onChange={handleChange}
           autoComplete="current-password"
           extra={
-            <a href="#" style={{ fontSize: 12, color: '#fb923c', textDecoration: 'none' }}>
+            <Link to="/forgot-password" style={{ fontSize: 12, color: '#fb923c', textDecoration: 'none' }}>
               Forgot password?
-            </a>
+            </Link>
           }
         />
+
+        {/* Remember Me Checkbox */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '-4px 0 4px' }}>
+          <input
+            type="checkbox"
+            id="rememberMe"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            style={{
+              cursor: 'pointer',
+              accentColor: '#fb923c',
+              width: 15,
+              height: 15,
+            }}
+          />
+          <label
+            htmlFor="rememberMe"
+            style={{
+              fontSize: 13,
+              color: 'var(--color-cream)',
+              cursor: 'pointer',
+              userSelect: 'none',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            Remember me
+          </label>
+        </div>
 
         {error && <ErrorBanner message={error} />}
 

@@ -1,12 +1,3 @@
-// ============================================================
-// BotCharacter — v4
-// ORB:  Proper 3D sphere with specular highlight, subsurface
-//       scatter — NO lines, bands, or grid covering the surface
-// FACE: Pill eyes, glassy sphere, soft expression
-// THEME: dark / light prop — refined palettes
-// FLOAT: Drop shadow underneath for heavy-object feel
-// ============================================================
-
 import { useEffect, useRef, useState } from 'react'
 
 type Theme = 'dark' | 'light'
@@ -123,11 +114,6 @@ export default function BotCharacter({ scrollProgress, size = 480, theme = 'dark
     </div>
   )
 }
-
-// ─────────────────────────────────────────────────────────────
-// ENERGY ORB — proper 3D sphere, NO lines or bands
-// Clean sphere with specular + subsurface + fresnel rim
-// ─────────────────────────────────────────────────────────────
 
 function EnergyOrb({ size, theme }: { size: number; theme: Theme }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)

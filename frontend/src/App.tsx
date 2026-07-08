@@ -23,6 +23,9 @@ import AnalyticsPage      from './pages/dashboard/AnalyticsPage'
 import SettingsPage       from './pages/dashboard/SettingsPage'
 
 import DocsPage from './pages/DocsPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 import Protected from './components/ProtectedRoute'
 import { useThemeStore } from './store/themeStore'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
@@ -61,6 +64,9 @@ export default function App() {
         <Route path="/"         element={<LandingPage theme={theme} setTheme={setTheme} />} />
         <Route path="/login"    element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/dashboard" element={
           <Protected><OverviewPage /></Protected>
         } />
@@ -70,7 +76,7 @@ export default function App() {
         <Route path="/dashboard/chatbots/new" element={
           <Protected><CreateChatbotPage /></Protected>
         } />
-        <Route path="/dashboard/chatbots/:id" element={
+        <Route path="/dashboard/chatbots/:slug" element={
           <Protected><ChatbotDetailPage /></Protected>
         } />
         <Route path="/dashboard/analytics" element={

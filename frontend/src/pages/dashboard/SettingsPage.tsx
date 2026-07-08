@@ -8,7 +8,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { toast } from 'react-hot-toast'
-import { User, Bell, Shield, Sun, Moon, Key, Copy, Check, Eye, EyeOff } from 'lucide-react'
+import { User, Bell, Shield, Sun, Moon, Key, Copy, Check, Eye, EyeOff, Lock } from 'lucide-react'
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useThemeStore()
@@ -18,6 +18,10 @@ export default function SettingsPage() {
   const [tenant, setTenant] = useState<{ id: string; name: string; api_key: string; plan: string } | null>(null)
   const [showKey, setShowKey] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  // Change Password Form State
+  const [pwdForm, setPwdForm] = useState({ current: '', new: '', confirm: '' })
+  const [pwdLoading, setPwdLoading] = useState(false)
 
   useEffect(() => {
     authAPI.getTenantMe()
@@ -33,171 +37,305 @@ export default function SettingsPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!pwdForm.current || !pwdForm.new || !pwdForm.confirm) {
+      toast.error('All password fields are required')
+      return
+    }
+    if (pwdForm.new !== pwdForm.confirm) {
+      toast.error('New passwords do not match')
+      return
+    }
+    if (pwdForm.new.length < 8) {
+      toast.error('New password must be at least 8 characters')
+      return
+    }
+    setPwdLoading(true)
+    try {
+      await authAPI.changePassword({
+        current_password: pwdForm.current,
+        new_password: pwdForm.new,
+      })
+      toast.success('Password updated successfully!')
+      setPwdForm({ current: '', new: '', confirm: '' })
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || 'Failed to update password'
+      toast.error(msg)
+    } finally {
+      setPwdLoading(false)
+    }
+  }
+
+  const inputStyle = {
+    background: 'var(--dash-input-bg)',
+    border: '1.5px solid var(--dash-input-border)',
+    borderRadius: 10,
+    padding: '10px 14px',
+    color: 'var(--color-cream)',
+    fontSize: 13,
+    fontFamily: 'var(--font-body)',
+    outline: 'none',
+    width: '100%',
+    boxSizing: 'border-box' as const,
+  }
+
   return (
     <DashboardLayout>
       <div style={{
         padding: 'clamp(24px, 3vw, 40px)',
-        maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 28,
+        maxWidth: 1120, display: 'flex', flexDirection: 'column', gap: 28,
+        width: '100%',
+        boxSizing: 'border-box',
       }}>
         <PageHeader
           title="Settings"
           subtitle="Manage your account and preferences."
         />
 
-        {/* Profile section */}
-        <Card style={{
-          display: 'flex', flexDirection: 'column', gap: 18,
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+          gap: 28,
+          alignItems: 'flex-start',
+          width: '100%',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <User size={18} color="#fb923c" strokeWidth={2} />
-            <h2 style={{
-              margin: 0, fontSize: 16, fontWeight: 700,
-              color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
-            }}>Profile</h2>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px 16px', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--color-muted)', fontFamily: 'var(--font-body)' }}>Name</span>
-            <span style={{ fontSize: 14, color: 'var(--color-cream)', fontWeight: 600, fontFamily: 'var(--font-body)' }}>
-              {user?.full_name || '—'}
-            </span>
-            <span style={{ fontSize: 13, color: 'var(--color-muted)', fontFamily: 'var(--font-body)' }}>Email</span>
-            <span style={{ fontSize: 14, color: 'var(--color-cream)', fontWeight: 600, fontFamily: 'var(--font-body)' }}>
-              {user?.email || '—'}
-            </span>
-            <span style={{ fontSize: 13, color: 'var(--color-muted)', fontFamily: 'var(--font-body)' }}>Role</span>
-            <Badge variant="secondary" style={{ width: 'fit-content', textTransform: 'uppercase' }}>
-              {user?.role || '—'}
-            </Badge>
-          </div>
-        </Card>
-
-        {/* API Credentials Section */}
-        <Card style={{
-          display: 'flex', flexDirection: 'column', gap: 18,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Key size={18} color="#fb923c" strokeWidth={2} />
-            <h2 style={{
-              margin: 0, fontSize: 16, fontWeight: 700,
-              color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
-            }}>API Keys</h2>
-          </div>
-
-          <div>
-            <p style={{
-              margin: 0, fontSize: 14, color: 'var(--color-cream)', fontWeight: 600,
-              fontFamily: 'var(--font-body)',
-            }}>Public API Key</p>
-            <p style={{
-              margin: '2px 0 12px', fontSize: 13, color: 'var(--color-muted)',
-              fontFamily: 'var(--font-body)',
+          {/* Left Column: Profile, API Keys, Security (Change Password) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+            
+            {/* Profile section */}
+            <Card style={{
+              display: 'flex', flexDirection: 'column', gap: 18,
             }}>
-              Authenticate your embed widget. Keep this key secret.
-            </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <User size={18} color="#fb923c" strokeWidth={2} />
+                <h2 style={{
+                  margin: 0, fontSize: 16, fontWeight: 700,
+                  color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
+                }}>Profile</h2>
+              </div>
 
-            {tenant ? (
-              <div style={{
-                display: 'flex', gap: 8, alignItems: 'center',
-                background: 'var(--dash-input-bg)', border: '1px solid var(--dash-input-border)',
-                borderRadius: 10, padding: '10px 14px',
-              }}>
-                <code style={{
-                  flex: 1, color: '#fb923c', fontSize: 13, fontFamily: 'monospace',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '12px 16px', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--color-muted)', fontFamily: 'var(--font-body)' }}>Name</span>
+                <span style={{ fontSize: 14, color: 'var(--color-cream)', fontWeight: 600, fontFamily: 'var(--font-body)' }}>
+                  {user?.full_name || '—'}
+                </span>
+                <span style={{ fontSize: 13, color: 'var(--color-muted)', fontFamily: 'var(--font-body)' }}>Email</span>
+                <span style={{ fontSize: 14, color: 'var(--color-cream)', fontWeight: 600, fontFamily: 'var(--font-body)' }}>
+                  {user?.email || '—'}
+                </span>
+                <span style={{ fontSize: 13, color: 'var(--color-muted)', fontFamily: 'var(--font-body)' }}>Role</span>
+                <Badge variant="secondary" style={{ width: 'fit-content', textTransform: 'uppercase' }}>
+                  {user?.role || '—'}
+                </Badge>
+              </div>
+            </Card>
+
+            {/* API Credentials Section */}
+            <Card style={{
+              display: 'flex', flexDirection: 'column', gap: 18,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Key size={18} color="#fb923c" strokeWidth={2} />
+                <h2 style={{
+                  margin: 0, fontSize: 16, fontWeight: 700,
+                  color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
+                }}>API Keys</h2>
+              </div>
+
+              <div>
+                <p style={{
+                  margin: 0, fontSize: 14, color: 'var(--color-cream)', fontWeight: 600,
+                  fontFamily: 'var(--font-body)',
+                }}>Public API Key</p>
+                <p style={{
+                  margin: '2px 0 12px', fontSize: 13, color: 'var(--color-muted)',
+                  fontFamily: 'var(--font-body)',
                 }}>
-                  {showKey ? tenant.api_key : '•'.repeat(40)}
-                </code>
+                  Authenticate your embed widget. Keep this key secret.
+                </p>
+
+                {tenant ? (
+                  <div style={{
+                    display: 'flex', gap: 8, alignItems: 'center',
+                    background: 'var(--dash-input-bg)', border: '1px solid var(--dash-input-border)',
+                    borderRadius: 10, padding: '10px 14px',
+                  }}>
+                    <code style={{
+                      flex: 1, color: '#fb923c', fontSize: 13, fontFamily: 'monospace',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {showKey ? tenant.api_key : '•'.repeat(40)}
+                    </code>
+                    <button
+                      onClick={() => setShowKey(!showKey)}
+                      title={showKey ? "Hide API key" : "Show API key"}
+                      style={{
+                        background: 'none', border: 'none', color: 'var(--color-muted)', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4,
+                      }}
+                    >
+                      {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                    <div style={{ width: 1, height: 16, background: 'var(--dash-card-border)' }} />
+                    <button
+                      onClick={copyKey}
+                      title="Copy API key"
+                      style={{
+                        background: 'none', border: 'none', color: copied ? '#4ade80' : 'var(--color-muted)', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4,
+                      }}
+                    >
+                      {copied ? <Check size={16} /> : <Copy size={16} />}
+                    </button>
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--color-muted)' }}>Loading credentials...</p>
+                )}
+              </div>
+            </Card>
+
+            {/* Change Password Section */}
+            <Card style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Lock size={18} color="#fb923c" strokeWidth={2} />
+                <h2 style={{
+                  margin: 0, fontSize: 16, fontWeight: 700,
+                  color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
+                }}>Security</h2>
+              </div>
+
+              <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-muted)' }}>Current Password</label>
+                  <input
+                    type="password"
+                    name="current"
+                    value={pwdForm.current}
+                    onChange={e => setPwdForm(f => ({ ...f, current: e.target.value }))}
+                    placeholder="••••••••"
+                    style={inputStyle}
+                  />
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-muted)' }}>New Password</label>
+                    <input
+                      type="password"
+                      name="new"
+                      value={pwdForm.new}
+                      onChange={e => setPwdForm(f => ({ ...f, new: e.target.value }))}
+                      placeholder="••••••••"
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-muted)' }}>Confirm Password</label>
+                    <input
+                      type="password"
+                      name="confirm"
+                      value={pwdForm.confirm}
+                      onChange={e => setPwdForm(f => ({ ...f, confirm: e.target.value }))}
+                      placeholder="••••••••"
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+
                 <button
-                  onClick={() => setShowKey(!showKey)}
-                  title={showKey ? "Hide API key" : "Show API key"}
+                  type="submit"
+                  disabled={pwdLoading}
                   style={{
-                    background: 'none', border: 'none', color: 'var(--color-muted)', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4,
+                    background: 'linear-gradient(135deg, #ea580c 0%, #fb923c 100%)',
+                    border: 'none',
+                    borderRadius: 10,
+                    color: '#fff',
+                    cursor: pwdLoading ? 'wait' : 'pointer',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    padding: '10px 20px',
+                    alignSelf: 'flex-start',
+                    marginTop: 6,
+                    boxShadow: '0 4px 14px rgba(234, 88, 12, 0.25)',
                   }}
                 >
-                  {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {pwdLoading ? 'Updating...' : 'Update Password'}
                 </button>
-                <div style={{ width: 1, height: 16, background: 'var(--dash-card-border)' }} />
-                <button
-                  onClick={copyKey}
-                  title="Copy API key"
-                  style={{
-                    background: 'none', border: 'none', color: copied ? '#4ade80' : 'var(--color-muted)', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4,
-                  }}
-                >
-                  {copied ? <Check size={16} /> : <Copy size={16} />}
+              </form>
+            </Card>
+
+          </div>
+
+          {/* Right Column: Appearance, Coming soon sections */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+            
+            {/* Appearance section */}
+            <Card style={{
+              display: 'flex', flexDirection: 'column', gap: 18,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {dark ? <Moon size={18} color="#60a5fa" strokeWidth={2} /> : <Sun size={18} color="#f59e0b" strokeWidth={2} />}
+                <h2 style={{
+                  margin: 0, fontSize: 16, fontWeight: 700,
+                  color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
+                }}>Appearance</h2>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <p style={{
+                    margin: 0, fontSize: 14, color: 'var(--color-cream)', fontWeight: 600,
+                    fontFamily: 'var(--font-body)',
+                  }}>Theme</p>
+                  <p style={{
+                    margin: '2px 0 0', fontSize: 13, color: 'var(--color-muted)',
+                    fontFamily: 'var(--font-body)',
+                  }}>
+                    Currently using {dark ? 'dark' : 'light'} mode
+                  </p>
+                </div>
+                <button onClick={toggleTheme} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: dark ? 'rgba(59,130,246,0.1)' : 'rgba(245,158,11,0.1)',
+                  border: `1px solid ${dark ? 'rgba(59,130,246,0.2)' : 'rgba(245,158,11,0.2)'}`,
+                  borderRadius: 8, padding: '8px 16px',
+                  color: dark ? '#60a5fa' : '#f59e0b',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  fontFamily: 'var(--font-body)',
+                }}>
+                  {dark ? <Sun size={15} /> : <Moon size={15} />}
+                  {dark ? 'Light mode' : 'Dark mode'}
                 </button>
               </div>
-            ) : (
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--color-muted)' }}>Loading credentials...</p>
-            )}
-          </div>
-        </Card>
+            </Card>
 
-        {/* Appearance section */}
-        <Card style={{
-          display: 'flex', flexDirection: 'column', gap: 18,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {dark ? <Moon size={18} color="#60a5fa" strokeWidth={2} /> : <Sun size={18} color="#f59e0b" strokeWidth={2} />}
-            <h2 style={{
-              margin: 0, fontSize: 16, fontWeight: 700,
-              color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
-            }}>Appearance</h2>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <p style={{
-                margin: 0, fontSize: 14, color: 'var(--color-cream)', fontWeight: 600,
-                fontFamily: 'var(--font-body)',
-              }}>Theme</p>
-              <p style={{
-                margin: '2px 0 0', fontSize: 13, color: 'var(--color-muted)',
-                fontFamily: 'var(--font-body)',
+            {/* Coming soon sections */}
+            {[
+              { icon: Bell,   label: 'Notifications', desc: 'Configure email and in-app notification preferences.' },
+              { icon: Shield, label: 'Security (2FA)', desc: 'Two-factor authentication and session management.' },
+            ].map(({ icon: Icon, label, desc }) => (
+              <Card key={label} style={{
+                opacity: 0.6,
               }}>
-                Currently using {dark ? 'dark' : 'light'} mode
-              </p>
-            </div>
-            <button onClick={toggleTheme} style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: dark ? 'rgba(59,130,246,0.1)' : 'rgba(245,158,11,0.1)',
-              border: `1px solid ${dark ? 'rgba(59,130,246,0.2)' : 'rgba(245,158,11,0.2)'}`,
-              borderRadius: 8, padding: '8px 16px',
-              color: dark ? '#60a5fa' : '#f59e0b',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              fontFamily: 'var(--font-body)',
-            }}>
-              {dark ? <Sun size={15} /> : <Moon size={15} />}
-              {dark ? 'Light mode' : 'Dark mode'}
-            </button>
-          </div>
-        </Card>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <Icon size={18} color="var(--color-muted)" strokeWidth={2} />
+                  <h2 style={{
+                    margin: 0, fontSize: 16, fontWeight: 700,
+                    color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
+                  }}>{label}</h2>
+                  <Badge variant="secondary">COMING SOON</Badge>
+                </div>
+                <p style={{
+                  margin: 0, fontSize: 14, color: 'var(--color-muted)',
+                  fontFamily: 'var(--font-body)',
+                }}>{desc}</p>
+              </Card>
+            ))}
 
-        {/* Coming soon sections */}
-        {[
-          { icon: Bell,   label: 'Notifications', desc: 'Configure email and in-app notification preferences.' },
-          { icon: Shield, label: 'Security',      desc: 'Two-factor authentication and session management.' },
-        ].map(({ icon: Icon, label, desc }) => (
-          <Card key={label} style={{
-            opacity: 0.6,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <Icon size={18} color="var(--color-muted)" strokeWidth={2} />
-              <h2 style={{
-                margin: 0, fontSize: 16, fontWeight: 700,
-                color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
-              }}>{label}</h2>
-              <Badge variant="secondary">COMING SOON</Badge>
-            </div>
-            <p style={{
-              margin: 0, fontSize: 14, color: 'var(--color-muted)',
-              fontFamily: 'var(--font-body)',
-            }}>{desc}</p>
-          </Card>
-        ))}
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   )

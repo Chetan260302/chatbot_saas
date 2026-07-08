@@ -14,12 +14,15 @@ from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.chat      import router as chat_router
 from app.api.v1.endpoints.public_chat import router as public_chat_router
 
+from sqlalchemy import text
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Runs on startup and shutdown."""
     # Startup: create all tables (Alembic handles prod migrations)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(text("ALTER TABLE chatbots ADD COLUMN IF NOT EXISTS slug VARCHAR(255) UNIQUE;"))
     print(f"✅ {settings.APP_NAME} started — {settings.ENVIRONMENT} mode")
     yield
     # Shutdown: cleanup if needed

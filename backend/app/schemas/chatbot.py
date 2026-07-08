@@ -25,6 +25,7 @@ class ChatbotUpdate(BaseModel):
 class ChatbotResponse(BaseModel):
     id:            UUID
     name:          str
+    slug:          Optional[str] = None
     description:   Optional[str]
     system_prompt: str
     widget_config: dict

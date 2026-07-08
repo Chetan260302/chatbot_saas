@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from app.models.user import User, UserRole
 from app.models.tenant import Tenant
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token
-from app.schemas.auth import TenantRegisterRequest, LoginRequest, TokenResponse
+from app.schemas.auth import TenantRegisterRequest, LoginRequest, TokenResponse, RegisterResponse
 import re
 
 
@@ -17,7 +17,7 @@ def slugify(text: str) -> str:
     return text
 
 
-async def register_tenant(data: TenantRegisterRequest, db: AsyncSession) -> TokenResponse:
+async def register_tenant(data: TenantRegisterRequest, db: AsyncSession) -> RegisterResponse:
     """
     Creates a new tenant (company) + owner user in one transaction.
     This is what happens when someone signs up on your SaaS.
@@ -50,16 +50,26 @@ async def register_tenant(data: TenantRegisterRequest, db: AsyncSession) -> Toke
         hashed_password=hash_password(data.password),
         role=UserRole.OWNER,
         tenant_id=tenant.id,
-        is_verified=True,  # skip email verification for now
+        is_verified=False,
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
 
-    # Return tokens immediately — user is logged in after signup
-    return TokenResponse(
-        access_token=create_access_token(str(user.id)),
-        refresh_token=create_refresh_token(str(user.id)),
+    # Generate email verification token
+    import uuid
+    from app.core.rate_limiter import redis_client
+    verification_token = str(uuid.uuid4())
+    key = f"email_verification_token:{verification_token}"
+    await redis_client.set(key, str(user.id), ex=86400) # 24h
+
+    verification_url = f"http://localhost:5173/verify-email?token={verification_token}"
+    print(f"EMAIL VERIFICATION LINK GENERATED: {verification_url}")
+
+    return RegisterResponse(
+        status="ok",
+        message="Registration successful. Please verify your email address to log in.",
+        dev_verification_url=verification_url
     )
 
 
@@ -75,6 +85,20 @@ async def login_user(data: LoginRequest, db: AsyncSession) -> TokenResponse:
         )
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Account is deactivated")
+    if not user.is_verified:
+        # Check if there is an existing token in Redis
+        # If not, we can generate a new one helpfully for ease of testing!
+        import uuid
+        from app.core.rate_limiter import redis_client
+        token = str(uuid.uuid4())
+        await redis_client.set(f"email_verification_token:{token}", str(user.id), ex=86400)
+        verification_url = f"http://localhost:5173/verify-email?token={token}"
+        print(f"RESENT EMAIL VERIFICATION LINK: {verification_url}")
+        
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Please verify your email address first. Verification link: {verification_url}"
+        )
 
     return TokenResponse(
         access_token=create_access_token(str(user.id)),

@@ -35,28 +35,27 @@ async def list_chatbots(
     return await get_chatbots(tenant, db)
 
 
-@router.get("/{chatbot_id}", response_model=ChatbotResponse)
+@router.get("/{id_or_slug}", response_model=ChatbotResponse)
 async def get_one(
-    chatbot_id: UUID,
+    id_or_slug: str,
     tenant: Tenant = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
 ):
-    return await get_chatbot(chatbot_id, tenant, db)
+    return await get_chatbot(id_or_slug, tenant, db)
 
-@router.get("/{chatbot_id}/stats")
+@router.get("/{id_or_slug}/stats")
 async def get_stats(
-    chatbot_id: UUID,
+    id_or_slug: str,
     tenant: Tenant       = Depends(get_current_tenant),
     db:     AsyncSession = Depends(get_db),
 ):
-
-
+    chatbot = await get_chatbot(id_or_slug, tenant, db)
     result = await db.execute(
         select(
             func.count(Message.id).label("total_messages"),
             func.sum(Message.tokens_used).label("total_tokens"),
         ).where(
-            Message.chatbot_id == chatbot_id,
+            Message.chatbot_id == chatbot.id,
             Message.tenant_id  == tenant.id,
         )
     )
@@ -67,20 +66,20 @@ async def get_stats(
     }
 
 
-@router.patch("/{chatbot_id}", response_model=ChatbotResponse)
+@router.patch("/{id_or_slug}", response_model=ChatbotResponse)
 async def update(
-    chatbot_id: UUID,
+    id_or_slug: str,
     data: ChatbotUpdate,
     tenant: Tenant = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
 ):
-    return await update_chatbot(chatbot_id, data, tenant, db)
+    return await update_chatbot(id_or_slug, data, tenant, db)
 
 
-@router.delete("/{chatbot_id}", status_code=204)
+@router.delete("/{id_or_slug}", status_code=204)
 async def delete(
-    chatbot_id: UUID,
+    id_or_slug: str,
     tenant: Tenant = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_db),
 ):
-    await delete_chatbot(chatbot_id, tenant, db)
+    await delete_chatbot(id_or_slug, tenant, db)

@@ -42,7 +42,7 @@ export default function CreateChatbotPage() {
         domain:        form.domain,
         system_prompt: form.system_prompt || undefined,
       })
-      navigate(`/dashboard/chatbots/${data.id}`)
+      navigate(`/dashboard/chatbots/${data.slug || data.id}`)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to create chatbot')
     } finally {

@@ -1,7 +1,13 @@
-# backend/app/schemas/auth.py
-from uuid import UUID
 from pydantic import BaseModel, EmailStr, field_validator
+from typing import Optional
+from uuid import UUID
 import re
+
+
+class RegisterResponse(BaseModel):
+    status: str
+    message: str
+    dev_verification_url: Optional[str] = None
 
 
 class TenantRegisterRequest(BaseModel):
@@ -56,3 +62,43 @@ class UserResponse(BaseModel):
     tenant_id: UUID
 
     model_config = {"from_attributes": True}
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one number")
+        return v
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one number")
+        return v
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str

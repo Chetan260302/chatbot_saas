@@ -1,42 +1,61 @@
-import {create} from "zustand"
-import {persist} from "zustand/middleware"
+import { create } from "zustand"
 import type { UserProfile } from "../api/auth"
 
-interface AuthState{
+interface AuthState {
     user:         UserProfile | null
     accessToken:  string | null
     isLoggedIn:   boolean
-    setAuth:      (token: string, refresh: string, user: UserProfile) => void
+    setAuth:      (token: string, refresh: string, user: UserProfile, rememberMe?: boolean) => void
     setUser:      (user: UserProfile) => void
     logout:       () => void
 }
 
-export const useAuthStore =create<AuthState>()(
-    persist(
-        (set) => ({
-            user:null,
-            accessToken:null,
-            isLoggedIn:false,
+const getStoredItem = (key: string) => {
+    return localStorage.getItem(key) || sessionStorage.getItem(key);
+};
 
+const getStoredUser = (): UserProfile | null => {
+    const u = getStoredItem('user_profile');
+    if (!u) return null;
+    try {
+        return JSON.parse(u);
+    } catch {
+        return null;
+    }
+};
 
-            setAuth:(token,refresh,user)=>{
-                localStorage.setItem('access_token',token)
-                localStorage.setItem('refresh_token',refresh)
-                set({user,accessToken:token,isLoggedIn:true})
+export const useAuthStore = create<AuthState>()((set) => {
+    const accessToken = getStoredItem('access_token');
+    const user = getStoredUser();
 
-            },
-            setUser:(user)=>{
-                set({user})
-            },
-            logout:()=>{
-                localStorage.removeItem('access_token')
-                localStorage.removeItem('refresh_token')
-                set({user:null,accessToken:null,isLoggedIn:false})
-            },
-        }),
-        {
-            name: 'auth-storage',
-            partialize: (s) => ({ user: s.user, isLoggedIn: s.isLoggedIn }),
-        }
-    )
-)
+    return {
+        user,
+        accessToken,
+        isLoggedIn: !!accessToken,
+
+        setAuth: (token, refresh, user, rememberMe = true) => {
+            const storage = rememberMe ? localStorage : sessionStorage;
+            storage.setItem('access_token', token);
+            storage.setItem('refresh_token', refresh);
+            storage.setItem('user_profile', JSON.stringify(user));
+            localStorage.setItem('remember_me', rememberMe ? 'true' : 'false');
+            set({ user, accessToken: token, isLoggedIn: true });
+        },
+        setUser: (user) => {
+            const isRememberMe = localStorage.getItem('remember_me') === 'true';
+            const storage = isRememberMe ? localStorage : sessionStorage;
+            storage.setItem('user_profile', JSON.stringify(user));
+            set({ user });
+        },
+        logout: () => {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user_profile');
+            localStorage.removeItem('remember_me');
+            sessionStorage.removeItem('access_token');
+            sessionStorage.removeItem('refresh_token');
+            sessionStorage.removeItem('user_profile');
+            set({ user: null, accessToken: null, isLoggedIn: false });
+        },
+    };
+});

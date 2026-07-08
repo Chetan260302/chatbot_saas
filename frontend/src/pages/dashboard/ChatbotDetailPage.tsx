@@ -16,7 +16,7 @@ import {
 type Tab = 'documents' | 'chat' | 'settings'
 
 export default function ChatbotDetailPage() {
-  const { id }     = useParams<{ id: string }>()
+  const { slug }   = useParams<{ slug: string }>()
   const navigate   = useNavigate()
   const [bot,      setBot]      = useState<Chatbot | null>(null)
   const [docs,     setDocs]     = useState<Document[]>([])
@@ -25,15 +25,22 @@ export default function ChatbotDetailPage() {
   const [copied,   setCopied]   = useState(false)
 
   useEffect(() => {
-    if (!id) return
-    Promise.all([
-      chatbotsApi.get(id),
-      documentsApi.list(id),
-    ]).then(([botRes, docsRes]) => {
-      setBot(botRes.data)
-      setDocs(docsRes.data)
-    }).finally(() => setLoading(false))
-  }, [id])
+    if (!slug) return
+    setLoading(true)
+    chatbotsApi.get(slug)
+      .then((botRes) => {
+        const botData = botRes.data
+        setBot(botData)
+        return documentsApi.list(botData.id)
+      })
+      .then((docsRes) => {
+        if (docsRes) setDocs(docsRes.data)
+      })
+      .catch((err) => {
+        console.error("Failed to load chatbot details:", err)
+      })
+      .finally(() => setLoading(false))
+  }, [slug])
 
   const copyEmbedCode = () => {
     if (!bot) return
@@ -716,67 +723,81 @@ function SettingsTab({
   )
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 600 }}>
-      <Card style={{
-        display: 'flex', flexDirection: 'column', gap: 18,
-      }}>
-        <h3 style={{
-          fontFamily: 'var(--font-display)', fontWeight: 800,
-          fontSize: 16, color: 'var(--color-cream)', margin: 0,
-        }}>General</h3>
-
-        {field('Chatbot name', 'name')}
-        {field('Description', 'description')}
-        {field('Domain', 'domain')}
-        {field('System prompt', 'system_prompt', true)}
-
-        <button onClick={save} disabled={saving} style={{
-          background: saving ? 'rgba(234,88,12,0.4)' : '#ea580c',
-          color: '#fff', border: 'none', borderRadius: 10,
-          padding: '12px 24px', fontSize: 14, fontWeight: 700,
-          cursor: saving ? 'wait' : 'pointer',
-          fontFamily: 'var(--font-body)',
-          boxShadow: '0 6px 20px rgba(234,88,12,0.3)',
-          alignSelf: 'flex-start',
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+      gap: 28,
+      alignItems: 'flex-start',
+      width: '100%',
+    }}>
+      {/* Left Column: General Configuration */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        <Card style={{
+          display: 'flex', flexDirection: 'column', gap: 18,
         }}>
-          {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save changes'}
-        </button>
-      </Card>
+          <h3 style={{
+            fontFamily: 'var(--font-display)', fontWeight: 800,
+            fontSize: 16, color: 'var(--color-cream)', margin: 0,
+          }}>General</h3>
 
-      {/* Danger zone */}
-      <div style={{
-        background: 'rgba(239,68,68,0.05)',
-        border: '1px solid rgba(239,68,68,0.20)',
-        borderRadius: 'var(--radius-lg)', padding: '24px',
-      }}>
-        <h3 style={{
-          fontFamily: 'var(--font-display)', fontWeight: 800,
-          fontSize: 16, color: '#fca5a5', margin: '0 0 8px',
-        }}>Danger zone</h3>
-        <p style={{
-          color: 'rgba(252,165,165,0.55)', fontSize: 13,
-          fontFamily: 'var(--font-body)', margin: '0 0 16px',
+          {field('Chatbot name', 'name')}
+          {field('Description', 'description')}
+          {field('Domain', 'domain')}
+          {field('System prompt', 'system_prompt', true)}
+
+          <button onClick={save} disabled={saving} style={{
+            background: saving ? 'rgba(234,88,12,0.4)' : '#ea580c',
+            color: '#fff', border: 'none', borderRadius: 10,
+            padding: '12px 24px', fontSize: 14, fontWeight: 700,
+            cursor: saving ? 'wait' : 'pointer',
+            fontFamily: 'var(--font-body)',
+            boxShadow: '0 6px 20px rgba(234,88,12,0.3)',
+            alignSelf: 'flex-start',
+          }}>
+            {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </Card>
+      </div>
+
+      {/* Right Column: Danger Zone */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        <div style={{
+          background: 'rgba(239,68,68,0.05)',
+          border: '1px solid rgba(239,68,68,0.20)',
+          borderRadius: 'var(--radius-lg)', padding: '24px',
         }}>
-          Deleting this chatbot will also delete all its documents and conversations.
-        </p>
-        <button onClick={handleDeleteTrigger} style={{
-          background: 'transparent', border: '1px solid rgba(239,68,68,0.35)',
-          borderRadius: 10, padding: '9px 18px',
-          color: '#f87171', fontSize: 13, fontWeight: 600,
-          cursor: 'pointer', fontFamily: 'var(--font-body)',
-          transition: 'all 0.2s',
-        }}
-        onMouseEnter={e => {
-          (e.currentTarget.style.background    = 'rgba(239,68,68,0.10)')
-          ;(e.currentTarget.style.borderColor   = 'rgba(239,68,68,0.55)')
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget.style.background    = 'transparent')
-          ;(e.currentTarget.style.borderColor   = 'rgba(239,68,68,0.35)')
-        }}
-        >
-          Delete chatbot
-        </button>
+          <h3 style={{
+            fontFamily: 'var(--font-display)', fontWeight: 800,
+            fontSize: 16, color: '#fca5a5', margin: '0 0 8px',
+          }}>Danger zone</h3>
+          <p style={{
+            color: 'rgba(252,165,165,0.55)', fontSize: 13,
+            fontFamily: 'var(--font-body)', margin: '0 0 16px',
+            lineHeight: 1.5,
+          }}>
+            Deleting this chatbot will also delete all its documents and conversations. This action is permanent and cannot be undone.
+          </p>
+          <button onClick={handleDeleteTrigger} style={{
+            background: 'transparent', border: '1px solid rgba(239,68,68,0.35)',
+            borderRadius: 10, padding: '9px 18px',
+            color: '#f87171', fontSize: 13, fontWeight: 600,
+            cursor: 'pointer', fontFamily: 'var(--font-body)',
+            transition: 'all 0.2s',
+            width: '100%',
+            textAlign: 'center',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget.style.background    = 'rgba(239,68,68,0.10)')
+            ;(e.currentTarget.style.borderColor   = 'rgba(239,68,68,0.55)')
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget.style.background    = 'transparent')
+            ;(e.currentTarget.style.borderColor   = 'rgba(239,68,68,0.35)')
+          }}
+          >
+            Delete chatbot
+          </button>
+        </div>
       </div>
 
       <AlertDialog

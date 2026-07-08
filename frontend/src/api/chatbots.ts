@@ -3,6 +3,7 @@ import {apiClient} from "./client"
 export interface Chatbot{
     id: string
     name: string
+    slug: string
     description: string | null
     system_prompt:string
     widget_config:string
@@ -37,22 +38,22 @@ export interface ChatbotStats {
 
 export const chatbotsApi = {
   list: () =>
-    apiClient.get<Chatbot[]>('chatbots'),
+    apiClient.get<Chatbot[]>('/chatbots'),
 
   create: (data: ChatbotCreate) =>
-    apiClient.post<Chatbot>('chatbots', data),
+    apiClient.post<Chatbot>('/chatbots', data),
 
   get: (id: string) =>
-    apiClient.get<Chatbot>(`chatbots/${id}`),
+    apiClient.get<Chatbot>(`/chatbots/${id}`),
 
   update: (id: string, data: Partial<ChatbotCreate> & { is_active?: boolean }) =>
-    apiClient.patch<Chatbot>(`chatbots/${id}`, data),
+    apiClient.patch<Chatbot>(`/chatbots/${id}`, data),
 
   delete: (id: string) =>
-    apiClient.delete(`chatbots/${id}`),
+    apiClient.delete(`/chatbots/${id}`),
 
   stats: (id: string) =>
-    apiClient.get<ChatbotStats>(`chatbots/${id}/stats`),
+    apiClient.get<ChatbotStats>(`/chatbots/${id}/stats`),
 }
 
 export const documentsApi = {
@@ -60,7 +61,7 @@ export const documentsApi = {
     const form = new FormData()
     form.append('file',       file)
     form.append('chatbot_id', chatbotId)
-    return apiClient.post<Document>('documents', form, {
+    return apiClient.post<Document>('/documents', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (e) => {
         if (onProgress && e.total) onProgress(Math.round(e.loaded * 100 / e.total))
@@ -69,10 +70,10 @@ export const documentsApi = {
   },
 
   list: (chatbotId: string) =>
-    apiClient.get<Document[]>(`documents/chatbot/${chatbotId}`),
+    apiClient.get<Document[]>(`/documents/chatbot/${chatbotId}`),
 
   delete: (docId: string) =>
-    apiClient.delete(`documents/${docId}`),
+    apiClient.delete(`/documents/${docId}`),
 }
 
 
@@ -84,8 +85,9 @@ export const chatApi={
         onToken:(token:string)=>void,
         onDone:()=>void,
     )=>{
-        const token = localStorage.getItem("access_token")
-        const res=await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:8000"}chat/stream`,{
+        const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
+        const baseUrl = (import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1").replace(/\/$/, "")
+        const res=await fetch(`${baseUrl}/chat/stream`,{
             method:"POST",
             headers:{
                 "Authorization" : `Bearer ${token}`,
@@ -109,5 +111,5 @@ export const chatApi={
         }
     },
     history: (sessionId:string)=>
-        apiClient.get(`chat/history/${sessionId}`),
+        apiClient.get(`/chat/history/${sessionId}`),
 }
