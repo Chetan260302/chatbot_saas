@@ -3,6 +3,8 @@
 // ============================================================
 
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuthStore } from '../store/authStore'
 import { NAV_LINKS } from '../data/content'
 
 interface NavbarProps {
@@ -17,39 +19,38 @@ export default function Navbar({
 
   const isDark = theme === 'dark'
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { isLoggedIn, logout } = useAuthStore()
 
   return (
     <nav style={{
-  position: 'fixed',
-  top: 16,
-  left: '50%',
-  transform: 'translateX(-50%)',
-  zIndex: 9999,                    // ← very high z-index, always on top
-  padding: '0 24px',
-  height: 60,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  width: 'min(1200px, calc(100% - 32px))',
-  borderRadius: 9999,
-  // Always frosted — not dependent on scroll
-  background: isDark
-    ? 'rgba(12,10,9,0.75)'
-    : 'rgba(255,251,245,0.82)',
-  backdropFilter: 'blur(20px)',
-  WebkitBackdropFilter: 'blur(20px)',
-  border: isDark
-    ? '1px solid rgba(251,146,60,0.12)'
-    : '1px solid rgba(180,83,9,0.15)',
-  boxShadow: isDark
-    ? '0 8px 32px rgba(0,0,0,0.4)'
-    : '0 8px 32px rgba(120,53,15,0.08)',
-  // Remove scroll-based transition entirely
-}}
+      position: 'fixed',
+      top: 16,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 9999,
+      padding: '0 24px',
+      height: 60,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      width: 'min(1200px, calc(100% - 32px))',
+      borderRadius: 9999,
+      background: isDark
+        ? 'rgba(12,10,9,0.75)'
+        : 'rgba(255,251,245,0.82)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      border: isDark
+        ? '1px solid rgba(251,146,60,0.12)'
+        : '1px solid rgba(180,83,9,0.15)',
+      boxShadow: isDark
+        ? '0 8px 32px rgba(0,0,0,0.4)'
+        : '0 8px 32px rgba(120,53,15,0.08)',
+    }}
     >
       {/* Logo */}
-      <a
-        href="/"
+      <Link
+        to="/"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -57,7 +58,6 @@ export default function Navbar({
           textDecoration: 'none',
         }}
       >
-        {/* Logo mark */}
         <div
           style={{
             width: 32,
@@ -68,6 +68,7 @@ export default function Navbar({
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: 16,
+            color: '#fff',
             boxShadow: '0 0 16px rgba(234,88,12,0.5)',
           }}
         >
@@ -75,7 +76,7 @@ export default function Navbar({
         </div>
         <span
           style={{
-            fontFamily: 'Nunito, sans-serif',
+            fontFamily: 'var(--font-display)',
             fontWeight: 800,
             fontSize: 20,
             color: isDark ? '#fff7ed' : '#1c1917',
@@ -84,7 +85,7 @@ export default function Navbar({
         >
           Botify
         </span>
-      </a>
+      </Link>
 
       {/* Desktop nav links */}
       <div
@@ -105,13 +106,13 @@ export default function Navbar({
               fontWeight: 500,
               textDecoration: 'none',
               transition: 'color 0.2s ease',
-              fontFamily: 'Plus Jakarta Sans, sans-serif',
+              fontFamily: 'var(--font-body)',
             }}
             onMouseEnter={(e) =>
               ((e.target as HTMLElement).style.color = '#fb923c')
             }
             onMouseLeave={(e) =>
-              ((e.target as HTMLElement).style.color = '#a8826a')
+              ((e.target as HTMLElement).style.color = isDark ? '#a8826a' : '#57534e')
             }
           >
             {link.label}
@@ -129,69 +130,106 @@ export default function Navbar({
             borderRadius: '50%',
             border: 'none',
             cursor: 'pointer',
-
             background: isDark
               ? 'rgba(255,255,255,0.06)'
               : 'rgba(0,0,0,0.05)',
-
             color: isDark ? '#fb923c' : '#ea580c',
-
             backdropFilter: 'blur(12px)',
           }}
         >
           {isDark ? '☀️' : '🌙'}
         </button>
-        <a
-          href="/login"
-          style={{
-            color: isDark ? '#a8826a' : '#57534e',
-            fontSize: 14,
-            fontWeight: 500,
-            textDecoration: 'none',
-            fontFamily: 'Plus Jakarta Sans, sans-serif',
-          }}
-          onMouseEnter={(e) =>
-            ((e.target as HTMLElement).style.color = '#fff7ed')
-          }
-          onMouseLeave={(e) =>
-            ((e.target as HTMLElement).style.color = '#a8826a')
-          }
-        >
-          Sign in
-        </a>
 
-        <a
-          href="/register"
-          style={{
-            background: '#ea580c',
-            color: isDark ? '#fff7ed' : '#fff7ed',
-            padding: '8px 20px',
-            borderRadius: 9999,
-            fontSize: 14,
-            fontWeight: 600,
-            textDecoration: 'none',
-            fontFamily: 'Plus Jakarta Sans, sans-serif',
-            boxShadow: isDark
-              ? '0 0 20px rgba(234,88,12,0.35)'
-              : '0 0 16px rgba(180,83,9,0.30)',
-            transition: 'all 0.2s ease',
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={(e) => {
-            const el = e.target as HTMLElement
-            el.style.background = '#c2410c'
-            el.style.boxShadow = '0 0 28px rgba(234,88,12,0.55)'
-            el.style.transform = 'translateY(-1px)'
-          }}
-          onMouseLeave={(e) => {
-            const el = e.target as HTMLElement
-            el.style.background = '#ea580c'
-            el.style.boxShadow = '0 0 20px rgba(234,88,12,0.35)'
-            el.style.transform = 'translateY(0)'
-          }}
-        >
-          Start free →
-        </a>
+        {isLoggedIn ? (
+          <>
+            <Link
+              to="/dashboard"
+              style={{
+                color: isDark ? '#fb923c' : '#ea580c',
+                fontSize: 14,
+                fontWeight: 600,
+                textDecoration: 'none',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              Dashboard
+            </Link>
+            <button
+              onClick={() => {
+                logout()
+                window.location.href = '/'
+              }}
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                color: '#f87171',
+                padding: '8px 16px',
+                borderRadius: 9999,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-body)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <>
+            <Link
+              to="/login"
+              style={{
+                color: isDark ? '#a8826a' : '#57534e',
+                fontSize: 14,
+                fontWeight: 500,
+                textDecoration: 'none',
+                fontFamily: 'var(--font-body)',
+              }}
+              onMouseEnter={(e) =>
+                ((e.target as HTMLElement).style.color = '#fff7ed')
+              }
+              onMouseLeave={(e) =>
+                ((e.target as HTMLElement).style.color = isDark ? '#a8826a' : '#57534e')
+              }
+            >
+              Sign in
+            </Link>
+
+            <Link
+              to="/register"
+              style={{
+                background: '#ea580c',
+                color: '#fff7ed',
+                padding: '8px 20px',
+                borderRadius: 9999,
+                fontSize: 14,
+                fontWeight: 600,
+                textDecoration: 'none',
+                fontFamily: 'var(--font-body)',
+                boxShadow: isDark
+                  ? '0 0 20px rgba(234,88,12,0.35)'
+                  : '0 0 16px rgba(180,83,9,0.30)',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => {
+                const el = e.target as HTMLElement
+                el.style.background = '#c2410c'
+                el.style.boxShadow = '0 0 28px rgba(234,88,12,0.55)'
+                el.style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={(e) => {
+                const el = e.target as HTMLElement
+                el.style.background = '#ea580c'
+                el.style.boxShadow = '0 0 20px rgba(234,88,12,0.35)'
+                el.style.transform = 'translateY(0)'
+              }}
+            >
+              Start free →
+            </Link>
+          </>
+        )}
 
         {/* Mobile hamburger */}
         <button
@@ -221,10 +259,10 @@ export default function Navbar({
             left: 0,
             right: 0,
             background: isDark
-            ? 'rgba(12,10,9,0.92)'
-            : 'rgba(255,247,237,0.92)',
+              ? 'rgba(12,10,9,0.92)'
+              : 'rgba(255,247,237,0.92)',
             backdropFilter: 'blur(20px)',
-            borderBottom: '1px solid #292524',
+            borderBottom: '1px solid var(--dash-card-border)',
             padding: '24px',
             display: 'flex',
             flexDirection: 'column',
@@ -242,28 +280,84 @@ export default function Navbar({
                 fontSize: 18,
                 fontWeight: 600,
                 textDecoration: 'none',
-                fontFamily: 'Nunito, sans-serif',
+                fontFamily: 'var(--font-display)',
               }}
             >
               {link.label}
             </a>
           ))}
-          <a
-            href="/register"
-            style={{
-              background: '#ea580c',
-              color: isDark ? '#fff7ed' : '#1c1917',
-              padding: '12px 24px',
-              borderRadius: 9999,
-              fontSize: 16,
-              fontWeight: 700,
-              textDecoration: 'none',
-              textAlign: 'center',
-              fontFamily: 'Nunito, sans-serif',
-            }}
-          >
-            Start free →
-          </a>
+
+          {isLoggedIn ? (
+            <>
+              <Link
+                to="/dashboard"
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  color: isDark ? '#fff7ed' : '#1c1917',
+                  fontSize: 18,
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  fontFamily: 'var(--font-display)',
+                }}
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={() => {
+                  setMobileOpen(false)
+                  logout()
+                  window.location.href = '/'
+                }}
+                style={{
+                  background: '#ef4444',
+                  color: '#fff',
+                  padding: '12px 24px',
+                  borderRadius: 9999,
+                  fontSize: 16,
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  fontFamily: 'var(--font-display)',
+                }}
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  color: isDark ? '#fff7ed' : '#1c1917',
+                  fontSize: 18,
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  fontFamily: 'var(--font-display)',
+                }}
+              >
+                Sign in
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  background: '#ea580c',
+                  color: '#fff7ed',
+                  padding: '12px 24px',
+                  borderRadius: 9999,
+                  fontSize: 16,
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  textAlign: 'center',
+                  fontFamily: 'var(--font-display)',
+                }}
+              >
+                Start free →
+              </Link>
+            </>
+          )}
         </div>
       )}
 

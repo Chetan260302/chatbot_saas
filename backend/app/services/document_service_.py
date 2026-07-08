@@ -42,6 +42,7 @@ def extract_text(file_path: Path, file_type: str) -> str:
         return "\n\n".join(pages)
 
     elif file_type == "docx":
+        # pyrefly: ignore [missing-import]
         from docx import Document as DocxDocument
         doc   = DocxDocument(str(file_path))
         parts = []

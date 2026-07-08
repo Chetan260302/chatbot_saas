@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
     API_V1_PREFIX: str = "/api/v1"
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:5173"]  # frontend dev servers
+    ALLOWED_ORIGINS: list[str] = ["*"]  # frontend dev servers
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
@@ -62,6 +62,7 @@ class Settings(BaseSettings):
         env_file=str(ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",
     )
 
 

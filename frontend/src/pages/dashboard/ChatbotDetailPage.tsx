@@ -2,13 +2,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { chatbotsApi, documentsApi, chatApi, type Chatbot, type Document } from '../../api/chatbots'
+import { authAPI } from '../../api/auth'
 import DashboardLayout from './DashboardLayout'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
+import { AlertDialog } from '../../components/ui/AlertDialog'
 import { toast } from 'react-hot-toast'
 import {
   FileText, MessageSquare, Settings, ArrowLeft, Trash2,
-  AlertTriangle, Copy, Check, UploadCloud, Send, RefreshCw, Bot,
+  AlertTriangle, Copy, Check, UploadCloud, Send, RefreshCw, Bot, BookOpen,
 } from 'lucide-react'
 
 type Tab = 'documents' | 'chat' | 'settings'
@@ -116,26 +118,61 @@ export default function ChatbotDetailPage() {
               }}>
                 Domain: <strong style={{ color: '#fb923c' }}>{bot.domain}</strong> · {docs.length} document{docs.length !== 1 ? 's' : ''}
               </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--color-subtle)', fontFamily: 'monospace' }}>
+                  ID: {bot.id}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigator.clipboard.writeText(bot.id)
+                    toast.success('Chatbot ID copied!')
+                  }}
+                  style={{
+                    background: 'none', border: 'none', color: '#fb923c', cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: 0,
+                  }}
+                >
+                  Copy
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Quick embed button */}
-          <button
-            onClick={copyEmbedCode}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: 'rgba(255,255,255,0.03)', border: '1.5px solid var(--dash-card-border)',
-              borderRadius: '8px', padding: '10px 18px',
-              color: copied ? '#4ade80' : '#fb923c', fontSize: 13, fontWeight: 700,
-              cursor: 'pointer', fontFamily: 'var(--font-body)',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(234,88,12,0.40)')}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--dash-card-border)')}
-          >
-            {copied ? <Check size={15} /> : <Copy size={15} />}
-            {copied ? 'Copied!' : 'Copy embed code'}
-          </button>
+          {/* Quick embed buttons */}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <Link
+              to="/docs"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: 'none', border: '1.5px solid transparent',
+                borderRadius: '8px', padding: '10px 16px',
+                color: 'var(--color-muted)', fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'var(--font-body)',
+                textDecoration: 'none',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#fb923c')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-muted)')}
+            >
+              <BookOpen size={15} /> Integration Guide
+            </Link>
+            <button
+              onClick={copyEmbedCode}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: 'rgba(255,255,255,0.03)', border: '1.5px solid var(--dash-card-border)',
+                borderRadius: '8px', padding: '10px 18px',
+                color: copied ? '#4ade80' : '#fb923c', fontSize: 13, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'var(--font-body)',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(234,88,12,0.40)')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--dash-card-border)')}
+            >
+              {copied ? <Check size={15} /> : <Copy size={15} />}
+              {copied ? 'Copied!' : 'Copy embed code'}
+            </button>
+          </div>
         </Card>
 
         {/* Tabs switcher */}
@@ -599,6 +636,7 @@ function SettingsTab({
   })
   const [saving,  setSaving]  = useState(false)
   const [saved,   setSaved]   = useState(false)
+  const [alertState, setAlertState] = useState<{ isOpen: boolean; step: 1 | 2 }>({ isOpen: false, step: 1 })
 
   const save = async () => {
     setSaving(true)
@@ -615,13 +653,16 @@ function SettingsTab({
     }
   }
 
-  const deletBot = async () => {
-    const firstConfirm = confirm(`Delete "${bot.name}"? This cannot be undone.`)
-    if (!firstConfirm) return
+  const handleDeleteTrigger = () => {
+    setAlertState({ isOpen: true, step: 1 })
+  }
 
-    const secondConfirm = confirm(`WARNING: Everything related to this chatbot (including all uploaded documents and conversation logs) will be permanently destroyed and CANNOT be undone. Are you sure you want to proceed?`)
-    if (!secondConfirm) return
+  const handleConfirmStep1 = () => {
+    setAlertState({ isOpen: true, step: 2 })
+  }
 
+  const handleConfirmStep2 = async () => {
+    setAlertState({ isOpen: false, step: 1 })
     try {
       await chatbotsApi.delete(bot.id)
       toast.success('Chatbot and all associated data permanently deleted.')
@@ -629,6 +670,10 @@ function SettingsTab({
     } catch (e: any) {
       toast.error('Failed to delete chatbot')
     }
+  }
+
+  const handleCancelAlert = () => {
+    setAlertState({ isOpen: false, step: 1 })
   }
 
   const field = (label: string, key: keyof typeof form, multiline = false) => (
@@ -714,7 +759,7 @@ function SettingsTab({
         }}>
           Deleting this chatbot will also delete all its documents and conversations.
         </p>
-        <button onClick={deletBot} style={{
+        <button onClick={handleDeleteTrigger} style={{
           background: 'transparent', border: '1px solid rgba(239,68,68,0.35)',
           borderRadius: 10, padding: '9px 18px',
           color: '#f87171', fontSize: 13, fontWeight: 600,
@@ -733,6 +778,28 @@ function SettingsTab({
           Delete chatbot
         </button>
       </div>
+
+      <AlertDialog
+        isOpen={alertState.isOpen && alertState.step === 1}
+        title={`Delete "${bot.name}"?`}
+        description="Are you sure you want to delete this chatbot? This action cannot be undone."
+        confirmText="Proceed"
+        cancelText="Cancel"
+        onConfirm={handleConfirmStep1}
+        onCancel={handleCancelAlert}
+        isDanger
+      />
+
+      <AlertDialog
+        isOpen={alertState.isOpen && alertState.step === 2}
+        title="WARNING: Permanent Destruction"
+        description="Everything related to this chatbot, including all uploaded documents and conversation logs, will be permanently destroyed and CANNOT be undone. Are you absolutely sure you want to proceed?"
+        confirmText="Permanently Delete"
+        cancelText="Cancel"
+        onConfirm={handleConfirmStep2}
+        onCancel={handleCancelAlert}
+        isDanger
+      />
     </div>
   )
 }

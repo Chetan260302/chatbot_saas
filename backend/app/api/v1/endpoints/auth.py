@@ -1,4 +1,6 @@
 # backend/app/api/v1/endpoints/auth.py
+from app.core.dependencies import get_current_tenant
+from app.models.tenant import Tenant
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import JWTError
@@ -46,3 +48,9 @@ async def refresh(data: RefreshRequest):
 async def get_me(current_user: User = Depends(get_current_user)):
     """Get the currently logged-in user's profile."""
     return current_user
+
+# backend/app/api/v1/endpoints/auth.py — add this
+
+@router.get("/tenant/me")
+async def get_my_tenant(tenant: Tenant = Depends(get_current_tenant)):
+    return {"id": tenant.id, "name": tenant.name, "api_key": tenant.api_key, "plan": tenant.plan}

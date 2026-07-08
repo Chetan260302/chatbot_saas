@@ -22,6 +22,7 @@ import ChatbotDetailPage  from './pages/dashboard/ChatbotDetailPage'
 import AnalyticsPage      from './pages/dashboard/AnalyticsPage'
 import SettingsPage       from './pages/dashboard/SettingsPage'
 
+import DocsPage from './pages/DocsPage'
 import Protected from './components/ProtectedRoute'
 import { useThemeStore } from './store/themeStore'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
@@ -78,6 +79,7 @@ export default function App() {
         <Route path="/dashboard/settings" element={
           <Protected><SettingsPage /></Protected>
         } />
+        <Route path="/docs" element={<DocsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -158,8 +158,8 @@ export default function RegisterPage() {
               fontFamily: 'Plus Jakarta Sans, sans-serif',
             }}>
               {strength === 4 ? 'Strong password ✓'
-               : strength === 3 ? 'Good — add a symbol to make it stronger'
-               : strength === 2 ? 'Weak — add uppercase + numbers'
+               : strength === 3 ? 'Good add a symbol to make it stronger'
+               : strength === 2 ? 'Weak add uppercase + numbers'
                : 'Too weak'}
             </p>
           </div>

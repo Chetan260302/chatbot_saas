@@ -43,6 +43,11 @@ export const authAPI={
         const response = await apiClient.get<UserProfile>('auth/me')
         return response.data
     },
+    // Get tenant details including API key
+    getTenantMe: async () => {
+        const response = await apiClient.get<{ id: string; name: string; api_key: string; plan: string }>('auth/tenant/me')
+        return response.data
+    },
 
     //logout
     logout: async () => {

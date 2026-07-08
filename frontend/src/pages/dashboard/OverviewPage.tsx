@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { chatbotsApi, documentsApi, type Chatbot } from '../../api/chatbots'
+import { authAPI } from '../../api/auth'
 import { useAuthStore } from '../../store/authStore'
 import DashboardLayout from './DashboardLayout'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -12,6 +13,7 @@ import {
   Bot, Zap, FileText, CreditCard, Plus, ArrowRight,
   MessageSquare, BarChart3, Settings, ShieldAlert,
   Clock, PlusCircle, Globe, CheckCircle,
+  BookOpen,
 } from 'lucide-react'
 
 interface ActivityItem {
@@ -32,9 +34,16 @@ export default function OverviewPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [plan, setPlan] = useState('free')
 
   useEffect(() => {
     setLoading(true)
+
+    // Load actual tenant plan
+    authAPI.getTenantMe()
+      .then(res => setPlan(res.plan || 'free'))
+      .catch(err => console.error("Failed to load tenant plan:", err))
+
     chatbotsApi.list()
       .then(async (res) => {
         const bots = res.data
@@ -126,12 +135,7 @@ export default function OverviewPage() {
 
   const firstName = user?.full_name?.split(' ')[0] || 'there'
 
-  // Map role to Subscription Plan Label
-  const getPlanLabel = (role: string) => {
-    if (role === 'owner') return 'Premium Plan'
-    if (role === 'admin') return 'Business Plan'
-    return 'Standard Plan'
-  }
+
 
   return (
     <DashboardLayout>
@@ -179,7 +183,7 @@ export default function OverviewPage() {
           <StatCard
             icon={CreditCard}
             label="Current Plan"
-            value={loading ? '...' : getPlanLabel(user?.role || '')}
+            value={loading ? '...' : plan.charAt(0).toUpperCase() + plan.slice(1) + ' Plan'}
             iconColor="#a855f7"
             iconBg="rgba(168, 85, 247, 0.1)"
           />
@@ -373,6 +377,33 @@ export default function OverviewPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <BarChart3 size={16} color="#60a5fa" />
                   <span>View Analytics</span>
+                </div>
+                <ArrowRight size={14} />
+              </button>
+
+              <button
+                onClick={() => navigate('/docs')}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid var(--dash-card-border)',
+                  color: 'var(--color-cream)',
+                  borderRadius: '10px',
+                  padding: '12px 16px',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-body)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  transition: 'all 0.18s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(234, 88, 12, 0.35)')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--dash-card-border)')}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <BookOpen size={16} color="#fb923c" />
+                  <span>View Documentation</span>
                 </div>
                 <ArrowRight size={14} />
               </button>

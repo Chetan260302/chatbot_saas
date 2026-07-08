@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.core.security import decode_token
 from app.models.user import User
 from app.models.tenant import Tenant
+from fastapi import Header
 
 bearer_scheme = HTTPBearer()
 
@@ -69,3 +70,17 @@ def require_role(*roles: str):
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         return current_user
     return role_checker
+
+async def get_tenant_by_api_key(
+    x_api_key:str = Header(...,alias="X-API-Key"),
+    db:AsyncSession = Depends(get_db)
+) -> Tenant:
+    """ Used by PUBLIC endpoints (the embedded widget).
+    No login required — just a valid API key identifies the business.
+    """
+    result = await db.execute(select(Tenant).where(Tenant.api_key==x_api_key,Tenant.is_active==True))
+    tenant = result.scalar_one_or_none()
+    
+    if not tenant or not tenant.is_active:
+        raise HTTPException(status_code=403, detail="Invalid API key orTenant not found or inactive")
+    return tenant

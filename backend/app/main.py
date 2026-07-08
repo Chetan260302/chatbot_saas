@@ -12,7 +12,7 @@ from app.api.v1.endpoints.auth      import router as auth_router
 from app.api.v1.endpoints.chatbots  import router as chatbots_router
 from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.chat      import router as chat_router
-
+from app.api.v1.endpoints.public_chat import router as public_chat_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,12 +47,35 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def add_public_cors_headers(request, call_next):
+    # Handle preflight OPTIONS request for public endpoints
+    if request.method == "OPTIONS" and request.url.path.startswith("/api/v1/public/"):
+        from fastapi.responses import Response
+        return Response(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, X-API-Key",
+            }
+        )
+
+    response = await call_next(request)
+
+    if request.url.path.startswith("/api/v1/public/"):
+        response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
+
+
 # from app.api.v1 import router as api_router
 
 app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
 app.include_router(chatbots_router,  prefix=settings.API_V1_PREFIX)
 app.include_router(documents_router, prefix=settings.API_V1_PREFIX)
 app.include_router(chat_router,      prefix=settings.API_V1_PREFIX)
+
+app.include_router(public_chat_router, prefix=settings.API_V1_PREFIX)
 
 @app.get("/")
 async def root():

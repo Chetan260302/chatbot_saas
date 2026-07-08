@@ -134,7 +134,7 @@ export default function CreateChatbotPage() {
 
               {/* Domain picker */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <label style={labelStyle}>Domain — helps improve retrieval accuracy</label>
+                <label style={labelStyle}>Domain helps improve retrieval accuracy</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
                   {DOMAINS.map((d) => {
                     const selected = form.domain === d.value
@@ -171,7 +171,7 @@ export default function CreateChatbotPage() {
               {/* System prompt */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <label style={labelStyle}>
-                  System prompt <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>(optional — we use a smart default)</span>
+                  System prompt <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>(optional we use a smart default)</span>
                 </label>
                 <textarea
                   value={form.system_prompt}
@@ -247,7 +247,7 @@ export default function CreateChatbotPage() {
               {[
                 { icon: FileText, text: 'Upload clear, well-structured documents for best accuracy.' },
                 { icon: MessageSquare, text: 'A specific system prompt helps your bot stay on-topic.' },
-                { icon: Globe, text: 'Choose the right domain — it optimizes chunking & retrieval.' },
+                { icon: Globe, text: 'Choose the right domain it optimizes chunking & retrieval.' },
               ].map(({ icon: TipIcon, text }, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   <TipIcon size={15} color="#fb923c" strokeWidth={1.8} style={{ flexShrink: 0, marginTop: 2 }} />

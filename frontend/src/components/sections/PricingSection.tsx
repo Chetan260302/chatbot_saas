@@ -2,7 +2,7 @@ import { useReveal } from '../../hooks/useReveal'
 import { PRICING } from '../../data/content'
 
 export default function PricingSection({ theme }: { theme: 'dark' | 'light' }) {
-  const isDark   = theme === 'dark'
+  const isDark = theme === 'dark'
   const titleRef = useReveal<HTMLDivElement>()
   const cardsRef = useReveal<HTMLDivElement>({ delay: 80 })
 
@@ -100,9 +100,14 @@ export default function PricingSection({ theme }: { theme: 'dark' | 'light' }) {
           }}>
             Talk to our team about Enterprise →
           </a>
+          
         </div>
+        <p style={{ textAlign: 'center', color: '#78716c', fontSize: 13 }}>
+          🚧 Pricing shown for reference currently in beta, all plans free during developmnet,testing
+        </p>
 
       </div>
+
     </section>
   )
 }
@@ -125,11 +130,10 @@ function PricingCard({
           ? 'linear-gradient(145deg, #1c0f05 0%, #120a03 100%)'
           : 'linear-gradient(145deg, #fff1e6 0%, #ffe8d0 100%)'
         : isDark ? '#0e0c0a' : '#ffffff',
-      border: `${highlighted ? 2 : 1}px solid ${
-        highlighted
+      border: `${highlighted ? 2 : 1}px solid ${highlighted
           ? 'rgba(234,88,12,0.55)'
           : isDark ? 'rgba(41,37,36,0.6)' : 'rgba(234,88,12,0.10)'
-      }`,
+        }`,
       borderRadius: 20,
       boxShadow: highlighted
         ? isDark
@@ -217,9 +221,9 @@ function PricingCard({
         fontFamily: 'Plus Jakarta Sans, sans-serif',
         transition: 'all 0.2s ease',
         background: highlighted ? '#ea580c' : 'transparent',
-        color:      highlighted ? '#fff7ed' : isDark ? '#fb923c' : '#ea580c',
-        border:     highlighted ? 'none' : `2px solid ${isDark ? 'rgba(251,146,60,0.35)' : 'rgba(234,88,12,0.35)'}`,
-        boxShadow:  highlighted ? '0 8px 24px rgba(234,88,12,0.4)' : 'none',
+        color: highlighted ? '#fff7ed' : isDark ? '#fb923c' : '#ea580c',
+        border: highlighted ? 'none' : `2px solid ${isDark ? 'rgba(251,146,60,0.35)' : 'rgba(234,88,12,0.35)'}`,
+        boxShadow: highlighted ? '0 8px 24px rgba(234,88,12,0.4)' : 'none',
         marginBottom: 24,
       }}>
         {plan.cta}

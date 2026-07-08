@@ -5,7 +5,7 @@ import { useAuthStore } from '../../store/authStore'
 import { useThemeStore } from '../../store/themeStore'
 import {
   LayoutDashboard, Bot, BarChart3, Settings,
-  LogOut, Sun, Moon, PanelLeftClose, PanelLeft,
+  LogOut, Sun, Moon, PanelLeftClose, PanelLeft, BookOpen,
 } from 'lucide-react'
 
 const NAV = [
@@ -13,6 +13,7 @@ const NAV = [
   { icon: Bot,             label: 'Chatbots',  href: '/dashboard/chatbots' },
   { icon: BarChart3,       label: 'Analytics', href: '/dashboard/analytics' },
   { icon: Settings,        label: 'Settings',  href: '/dashboard/settings' },
+  { icon: BookOpen,        label: 'Docs',      href: '/docs' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
