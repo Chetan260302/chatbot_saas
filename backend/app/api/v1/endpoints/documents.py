@@ -55,3 +55,24 @@ async def list_documents(
         }
         for d in docs
     ]
+
+
+@router.delete("/{doc_id}", status_code=204)
+async def delete_document(
+    doc_id: UUID,
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Document).where(
+            Document.id == doc_id,
+            Document.tenant_id == tenant.id
+        )
+    )
+    doc = result.scalar_one_or_none()
+    if not doc:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Document not found")
+    await db.delete(doc)
+    await db.commit()
+    return None
