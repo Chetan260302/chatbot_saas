@@ -9,7 +9,7 @@ import { AuthLayout, FormField, ErrorBanner, SubmitButton } from './components/A
 
 export default function RegisterPage() {
   const navigate   = useNavigate()
-  const { setAuth, isLoggedIn } = useAuthStore()
+  const { isLoggedIn } = useAuthStore()
   const { theme }  = useThemeStore()
 
   const [form, setForm] = useState({

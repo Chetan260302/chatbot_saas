@@ -121,22 +121,18 @@ async def chat_stream(
         full_text = "".join(full_response)
         tokens    = len(full_text.split()) * 1.3  # rough estimate
 
-        bot_msg = Message(
-            role="assistant",
-            content=full_text,
-            session_id=data.session_id,
-            chatbot_id=chatbot.id,
-            tenant_id=tenant.id,
-            tokens_used=int(tokens),   # ← save this
-        )
-
-        # bot_msg = Message(
-        #     role="assistant", content="".join(full_response),
-        #     session_id=data.session_id,
-        #     chatbot_id=chatbot.id, tenant_id=tenant.id,
-        # )
-        db.add(bot_msg)
-        await db.commit()
+        from app.db.session import AsyncSessionLocal
+        async with AsyncSessionLocal() as local_db:
+            bot_msg = Message(
+                role="assistant",
+                content=full_text,
+                session_id=data.session_id,
+                chatbot_id=chatbot.id,
+                tenant_id=tenant.id,
+                tokens_used=int(tokens),   # ← save this
+            )
+            local_db.add(bot_msg)
+            await local_db.commit()
 
     return StreamingResponse(generate(), media_type="text/plain")
 

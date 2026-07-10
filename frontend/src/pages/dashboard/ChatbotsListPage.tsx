@@ -7,7 +7,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import {
-  Search, Plus, ArrowRight, ShieldAlert,
+  Search, Plus, ShieldAlert,
   Bot, FileText, MessageSquare, Edit2,
 } from 'lucide-react'
 

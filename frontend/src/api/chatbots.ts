@@ -113,3 +113,9 @@ export const chatApi={
     history: (sessionId:string)=>
         apiClient.get(`/chat/history/${sessionId}`),
 }
+
+
+export const analyticsApi = {
+  overview: () =>
+    apiClient.get('/analytics/overview'),
+}

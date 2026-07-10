@@ -5,7 +5,6 @@ import { chatbotsApi } from '../../api/chatbots'
 import DashboardLayout from './DashboardLayout'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Card } from '../../components/ui/Card'
-import { Badge } from '../../components/ui/Badge'
 import {
   Globe, GraduationCap, ShoppingCart, Scale, Users,
   Lightbulb, FileText, MessageSquare, AlertTriangle, ArrowLeft,

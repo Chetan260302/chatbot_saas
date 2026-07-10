@@ -23,20 +23,22 @@ export default function BotScene({ scrollProgress, size, theme }: BotSceneProps)
       {/* Ground reflection */}
       <div style={{
         position: 'absolute',
-        bottom: -28,
+        bottom: '-5.5%',
         left: '50%',
         transform: 'translateX(-50%)',
         width: '45%',
-        height: 18,
+        height: '3.5%',
         background: theme === 'dark'
           ? 'radial-gradient(ellipse, rgba(234,88,12,0.30) 0%, transparent 70%)'
           : 'radial-gradient(ellipse, rgba(180,80,10,0.20) 0%, transparent 70%)',
         filter: 'blur(10px)',
         borderRadius: '50%',
-        pointerEvents: 'none',
+        pointerEvents: 'none',  
       }} />
 
       <Canvas
+        dpr={[1, 2]}
+        key="bot"
         camera={{ position: [0, 0, 3.2], fov: 42 }}
         style={{ background: 'transparent', overflow: 'visible' }}
         gl={{ alpha: true, antialias: true }}

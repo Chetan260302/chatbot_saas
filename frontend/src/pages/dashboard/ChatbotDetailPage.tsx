@@ -2,15 +2,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { chatbotsApi, documentsApi, chatApi, type Chatbot, type Document } from '../../api/chatbots'
-import { authAPI } from '../../api/auth'
 import DashboardLayout from './DashboardLayout'
 import { Card } from '../../components/ui/Card'
-import { Badge } from '../../components/ui/Badge'
 import { AlertDialog } from '../../components/ui/AlertDialog'
 import { toast } from 'react-hot-toast'
 import {
   FileText, MessageSquare, Settings, ArrowLeft, Trash2,
-  AlertTriangle, Copy, Check, UploadCloud, Send, RefreshCw, Bot, BookOpen,
+  Copy, Check, UploadCloud, Send, RefreshCw, Bot, BookOpen,
 } from 'lucide-react'
 
 type Tab = 'documents' | 'chat' | 'settings'
@@ -759,8 +757,70 @@ function SettingsTab({
         </Card>
       </div>
 
-      {/* Right Column: Danger Zone */}
+      {/* Right Column: Bot Status + Danger Zone */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        {/* Bot Status Toggle */}
+        <Card style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <h3 style={{
+            fontFamily: 'var(--font-display)', fontWeight: 800,
+            fontSize: 16, color: 'var(--color-cream)', margin: 0,
+          }}>Bot Status</h3>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 16,
+          }}>
+            <div>
+              <p style={{
+                margin: 0, fontSize: 14, fontWeight: 600,
+                color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
+              }}>
+                {bot.is_active ? 'Active' : 'Paused'}
+              </p>
+              <p style={{
+                margin: '4px 0 0', fontSize: 12,
+                color: 'var(--color-muted)', fontFamily: 'var(--font-body)',
+                lineHeight: 1.4,
+              }}>
+                {bot.is_active
+                  ? 'Bot is live and responding to messages on embedded sites.'
+                  : 'Bot is paused and will not respond to messages.'}
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  const { data } = await chatbotsApi.update(bot.id, { is_active: !bot.is_active })
+                  setBot(data)
+                  toast.success(data.is_active ? 'Chatbot activated!' : 'Chatbot paused.')
+                } catch {
+                  toast.error('Failed to update bot status')
+                }
+              }}
+              style={{
+                position: 'relative',
+                width: 48, height: 26, borderRadius: 13,
+                border: 'none', cursor: 'pointer', flexShrink: 0,
+                background: bot.is_active
+                  ? 'linear-gradient(135deg, #22c55e, #4ade80)'
+                  : 'rgba(255,255,255,0.12)',
+                transition: 'background 0.3s',
+                padding: 0,
+              }}
+              title={bot.is_active ? 'Click to pause bot' : 'Click to activate bot'}
+            >
+              <div style={{
+                position: 'absolute',
+                top: 3, left: bot.is_active ? 24 : 3,
+                width: 20, height: 20, borderRadius: '50%',
+                background: '#fff',
+                transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+              }} />
+            </button>
+          </div>
+        </Card>
+
+        {/* Danger Zone */}
         <div style={{
           background: 'rgba(239,68,68,0.05)',
           border: '1px solid rgba(239,68,68,0.20)',

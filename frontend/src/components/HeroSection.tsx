@@ -15,13 +15,14 @@ export default function HeroSection({ theme }: HeroSectionProps) {
   const charRef    = useRef<HTMLDivElement>(null)
   const textRef    = useRef<HTMLDivElement>(null)
   const hintRef    = useRef<HTMLDivElement>(null)
-  const [scrollProgress, setScrollProgress] = useState(0)
+  // const [scrollProgress, setScrollProgress] = useState(0)
+  const scrollProgressRef = useRef(0)
   const isDark = theme === 'dark'
 
   // Responsive sizing
   const sizes = useMemo(() => {
     if (typeof window === 'undefined') {
-      return { orbSize: 520, desktopHeight: '110vh', heroHeight: '100vh' }
+      return { orbSize: 520, desktopHeight: '100vh', heroHeight: '100vh' }
     }
     
     const vw = window.innerWidth
@@ -31,7 +32,7 @@ export default function HeroSection({ theme }: HeroSectionProps) {
     if (vw < 640) {
       return {
         orbSize: Math.min(280, vh * 0.35),
-        desktopHeight: vh < 600 ? '140vh' : '120vh',
+        desktopHeight: '100vh',
         heroHeight: '100vh',
       }
     }
@@ -39,7 +40,7 @@ export default function HeroSection({ theme }: HeroSectionProps) {
     if (vw < 1024) {
       return {
         orbSize: Math.min(380, vh * 0.45),
-        desktopHeight: '115vh',
+        desktopHeight: '100vh',
         heroHeight: '100vh',
       }
     }
@@ -77,7 +78,9 @@ export default function HeroSection({ theme }: HeroSectionProps) {
     if (isUnlocked) return
 
     // Set initial states for elements
-    gsap.set(charRef.current, { x: 0, scale: 1.0, opacity: 1 })
+    gsap.set(charRef.current, { x: 0, scale: 1.0,scaleX: 1,
+    scaleY: 1,
+    clearProps: "transform", opacity: 1 })
     gsap.set(textRef.current, { x: -80, opacity: 0 })
     gsap.set(hintRef.current, { opacity: 1, y: 0 })
 
@@ -91,6 +94,11 @@ export default function HeroSection({ theme }: HeroSectionProps) {
 
       const tl = gsap.timeline({
         onComplete: () => {
+          gsap.set(charRef.current, {
+            x: orbShiftX,
+            scaleX: 0.65,
+            scaleY: 0.65
+        })
           setIsUnlocked(true)
           animRunningRef.current = false
         }
@@ -102,12 +110,15 @@ export default function HeroSection({ theme }: HeroSectionProps) {
         value: 1,
         duration: 1.8,
         ease: 'power3.inOut',
-        onUpdate: () => setScrollProgress(progressObj.value)
+        onUpdate: () => {
+            scrollProgressRef.current = progressObj.value
+        }
       }, 0)
 
       tl.to(charRef.current, {
         x: orbShiftX,
-        scale: 0.65,
+        scaleX: 0.65,
+        scaleY: 0.65,
         duration: 1.8,
         ease: 'power3.inOut',
       }, 0)
@@ -174,6 +185,25 @@ export default function HeroSection({ theme }: HeroSectionProps) {
     }
   }, [isUnlocked])
 
+  console.log(window.innerHeight)
+  console.log(sizes.orbSize)
+
+  useEffect(() => {
+  const interval = setInterval(() => {
+    if (charRef.current) {
+      const rect = charRef.current.getBoundingClientRect();
+      console.log("Wrapper:", rect.width, rect.height);
+
+      const canvas = charRef.current.querySelector("canvas");
+      if (canvas) {
+        const canvasRect = canvas.getBoundingClientRect();
+        console.log("Canvas:", canvasRect.width, canvasRect.height);
+      }
+    }
+  }, 500);
+
+  return () => clearInterval(interval);
+}, []);
   return (
     <div
       ref={sectionRef}
@@ -202,7 +232,8 @@ export default function HeroSection({ theme }: HeroSectionProps) {
             position: 'absolute',
             top: '50%',
             left: '50%',
-            transform: 'translate(-50%, -50%)',
+            marginTop: -sizes.orbSize / 2,
+            marginLeft: -sizes.orbSize / 2,
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
@@ -212,7 +243,7 @@ export default function HeroSection({ theme }: HeroSectionProps) {
           }}
         >
           <BotScene
-            scrollProgress={scrollProgress}
+            scrollProgress={scrollProgressRef.current}
             size={sizes.orbSize}
             theme={theme}
           />

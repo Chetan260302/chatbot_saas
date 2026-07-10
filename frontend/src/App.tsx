@@ -23,6 +23,7 @@ import AnalyticsPage      from './pages/dashboard/AnalyticsPage'
 import SettingsPage       from './pages/dashboard/SettingsPage'
 
 import DocsPage from './pages/DocsPage'
+import ContactPage from './pages/ContactPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/dashboard" element={
           <Protected><OverviewPage /></Protected>
         } />

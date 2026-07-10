@@ -12,7 +12,7 @@ export default function Footer({ theme }: { theme: 'dark' | 'light' }) {
 
   return (
     <footer style={{
-      padding: 'clamp(40px, 5vw, 64px) 0 24px',
+      padding: 'clamp(24px, 3vw, 40px) 0 24px',
       background: isDark ? '#080604' : '#1c1917',
       position: 'relative',
     }}>

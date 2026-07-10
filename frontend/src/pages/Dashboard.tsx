@@ -1,6 +1,5 @@
 // src/pages/DashboardPage.tsx
 import { useAuthStore } from '../store/authStore'
-import { Link } from 'react-router-dom'
 
 export default function DashboardPage() {
   const { user, logout } = useAuthStore()

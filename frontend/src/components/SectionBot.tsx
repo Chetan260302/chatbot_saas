@@ -83,7 +83,7 @@ export default function SectionBot({ theme }: SectionBotProps) {
     const vw = window.innerWidth
     const padding = Math.max(24, vw * 0.03)
     const botWidth = 140
-    
+
     const targetX = side === 'left' ? padding : vw - botWidth - padding
 
     gsap.to(botRef.current, {

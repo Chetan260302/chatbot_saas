@@ -13,6 +13,7 @@ from app.api.v1.endpoints.chatbots  import router as chatbots_router
 from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.chat      import router as chat_router
 from app.api.v1.endpoints.public_chat import router as public_chat_router
+from app.api.v1.endpoints.analytics import router as analytics_router
 
 from sqlalchemy import text
 
@@ -79,6 +80,7 @@ app.include_router(documents_router, prefix=settings.API_V1_PREFIX)
 app.include_router(chat_router,      prefix=settings.API_V1_PREFIX)
 
 app.include_router(public_chat_router, prefix=settings.API_V1_PREFIX)
+app.include_router(analytics_router,   prefix=settings.API_V1_PREFIX)
 
 @app.get("/")
 async def root():

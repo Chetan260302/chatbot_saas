@@ -8,7 +8,7 @@ export default function FeaturesSection({ theme }: { theme: 'dark' | 'light' }) 
 
   return (
     <section style={{
-      padding: 'clamp(48px, 6vw, 80px) 0',
+      padding: 'clamp(32px, 4vw, 56px) 0 clamp(20px, 3vw, 36px)',
       position: 'relative',
       background: isDark ? '#0c0a09' : '#fffbf5',
     }}>
