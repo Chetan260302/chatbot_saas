@@ -8,7 +8,8 @@ from app.db.session import get_db
 from app.core.security import decode_token
 from app.models.user import User
 from app.models.tenant import Tenant
-from fastapi import Header
+from fastapi import Header,Query
+
 
 bearer_scheme = HTTPBearer()
 
@@ -84,3 +85,26 @@ async def get_tenant_by_api_key(
     if not tenant or not tenant.is_active:
         raise HTTPException(status_code=403, detail="Invalid API key orTenant not found or inactive")
     return tenant
+
+
+
+async def get_effective_tenant(
+    current_user: User = Depends(get_current_user),
+    override_tenant_id: str | None = Query(None, alias="tenant_id"),
+    db: AsyncSession = Depends(get_db),
+) -> Tenant | None:
+    """
+    Normal users: always their own tenant, override_tenant_id ignored.
+    Superadmin: can pass ?tenant_id=xxx to view/manage ANY tenant.
+    If superadmin passes nothing, returns None → caller shows ALL tenants' data.
+    """
+    if current_user.is_superadmin and override_tenant_id:
+        result = await db.execute(select(Tenant).where(Tenant.id == override_tenant_id))
+        return result.scalar_one_or_none()
+
+    if current_user.is_superadmin and not override_tenant_id:
+        return None  # signal: "no filter, show everything"
+
+    # Normal user — always their own tenant
+    result = await db.execute(select(Tenant).where(Tenant.id == current_user.tenant_id))
+    return result.scalar_one_or_none()

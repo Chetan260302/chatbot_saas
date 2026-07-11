@@ -740,7 +740,34 @@ function SettingsTab({
 
           {field('Chatbot name', 'name')}
           {field('Description', 'description')}
-          {field('Domain', 'domain')}
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{
+              fontSize: 13, fontWeight: 600,
+              color: 'var(--color-cream)', opacity: 0.8, fontFamily: 'var(--font-body)',
+            }}>Domain</label>
+            <select
+              value={form.domain}
+              onChange={e => setForm(f => ({ ...f, domain: e.target.value }))}
+              style={{
+                background: 'var(--dash-input-bg)',
+                border: '1.5px solid var(--dash-input-border)', borderRadius: 10,
+                padding: '11px 14px', color: 'var(--color-cream)', fontSize: 14,
+                fontFamily: 'var(--font-body)', outline: 'none',
+                cursor: 'pointer',
+                transition: 'border-color 0.2s',
+              }}
+              onFocus={e => (e.target.style.borderColor = 'rgba(234,88,12,0.5)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--dash-input-border)')}
+            >
+              <option value="general">General</option>
+              <option value="education">Education</option>
+              <option value="ecommerce">E-commerce</option>
+              <option value="legal">Legal</option>
+              <option value="hr">HR</option>
+            </select>
+          </div>
+
           {field('System prompt', 'system_prompt', true)}
 
           <button onClick={save} disabled={saving} style={{

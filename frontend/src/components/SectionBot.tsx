@@ -2,6 +2,7 @@
 // SectionBot — Persistent 3D bot across sections
 // Tracks the active section and slides smoothly left/right
 // across the screen. Fades out before the footer.
+// Appears at the TOP of sections, continuing from the hero bot.
 // ============================================================
 
 import { useEffect, useRef, useState } from 'react'
@@ -12,11 +13,17 @@ interface SectionBotProps {
   theme: 'dark' | 'light'
 }
 
+const BOT_SIZE = 200 // px — the cruising size of the section bot
+
 export default function SectionBot({ theme }: SectionBotProps) {
   const botRef = useRef<HTMLDivElement>(null)
+  const scaleRef = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
   const [side, setSide] = useState<'left' | 'right'>('right')
   const isDark = theme === 'dark'
+
+  // Track a scroll-based scale for the entry transition
+  const entryScaleRef = useRef(1)
 
   // Scroll visibility and section tracking
   useEffect(() => {
@@ -47,6 +54,18 @@ export default function SectionBot({ theme }: SectionBotProps) {
       }
 
       setVisible(show)
+
+      // Entry scale: over the first 300px past the hero, scale from 1.35→1.0
+      // This creates the illusion that the hero orb "flew" into the section bot position
+      const entryDistance = 300
+      const pastHero = Math.max(0, y - heroHeight)
+      const entryT = Math.min(1, pastHero / entryDistance)
+      entryScaleRef.current = 1.35 - entryT * 0.35 // 1.35 → 1.0
+
+      // Apply entry scale to the dedicated scale wrapper (separate from GSAP's transform)
+      if (scaleRef.current) {
+        scaleRef.current.style.transform = `scale(${entryScaleRef.current})`
+      }
 
       // 3. Robust distance-based section tracking
       const getCenterDist = (el: HTMLElement | null) => {
@@ -82,13 +101,12 @@ export default function SectionBot({ theme }: SectionBotProps) {
 
     const vw = window.innerWidth
     const padding = Math.max(24, vw * 0.03)
-    const botWidth = 140
 
-    const targetX = side === 'left' ? padding : vw - botWidth - padding
+    const targetX = side === 'left' ? padding : vw - BOT_SIZE - padding
 
     gsap.to(botRef.current, {
       x: targetX,
-      y: visible ? 0 : 35,
+      y: visible ? 0 : -35,
       opacity: visible ? 1 : 0,
       duration: 0.9,
       ease: 'power3.out',
@@ -99,10 +117,10 @@ export default function SectionBot({ theme }: SectionBotProps) {
     <div
       style={{
         position: 'fixed',
-        bottom: '5vh',
+        top: 'max(70px, 8vh)',
         left: 0,
         width: '100vw',
-        height: 140,
+        height: BOT_SIZE,
         zIndex: 150,
         pointerEvents: 'none',
       }}
@@ -111,8 +129,8 @@ export default function SectionBot({ theme }: SectionBotProps) {
       <div
         ref={botRef}
         style={{
-          width: 140,
-          height: 140,
+          width: BOT_SIZE,
+          height: BOT_SIZE,
           opacity: 0,
           pointerEvents: visible ? 'auto' : 'none',
           filter: isDark
@@ -120,34 +138,45 @@ export default function SectionBot({ theme }: SectionBotProps) {
             : 'drop-shadow(0 12px 24px rgba(194,65,12,0.18))',
         }}
       >
-        {/* Inner container for independent CSS floating animation */}
+        {/* Scale wrapper — driven by scroll, separate from GSAP's transform */}
         <div
+          ref={scaleRef}
           style={{
             width: '100%',
             height: '100%',
-            position: 'relative',
-            animation: visible ? 'float 4s ease-in-out infinite' : 'none',
+            transformOrigin: 'top center',
+            transition: 'transform 0.15s ease-out',
           }}
         >
-          {/* Ground shadow */}
+          {/* Inner container for independent CSS floating animation */}
           <div
             style={{
-              position: 'absolute',
-              bottom: -8,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '55%',
-              height: 8,
-              background: isDark
-                ? 'radial-gradient(ellipse, rgba(234,88,12,0.25) 0%, transparent 70%)'
-                : 'radial-gradient(ellipse, rgba(194,65,12,0.15) 0%, transparent 70%)',
-              filter: 'blur(4px)',
-              borderRadius: '50%',
-              pointerEvents: 'none',
+              width: '100%',
+              height: '100%',
+              position: 'relative',
+              animation: visible ? 'float 4s ease-in-out infinite' : 'none',
             }}
-          />
+          >
+            {/* Ground shadow */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: -8,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '55%',
+                height: 8,
+                background: isDark
+                  ? 'radial-gradient(ellipse, rgba(234,88,12,0.25) 0%, transparent 70%)'
+                  : 'radial-gradient(ellipse, rgba(194,65,12,0.15) 0%, transparent 70%)',
+                filter: 'blur(4px)',
+                borderRadius: '50%',
+                pointerEvents: 'none',
+              }}
+            />
 
-          <BotScene scrollProgress={0.75} size={140} theme={theme} />
+            <BotScene scrollProgressRef={entryScaleRef} theme={theme} />
+          </div>
         </div>
       </div>
     </div>

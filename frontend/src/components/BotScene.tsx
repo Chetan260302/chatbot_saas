@@ -6,41 +6,46 @@
 // 1-scroll = full animation
 // ============================================================
 
-import { useRef, useMemo, useEffect } from 'react'
+import React, { useRef, useMemo, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Float, Line } from '@react-three/drei'
 import * as THREE from 'three'
 
 interface BotSceneProps {
-  scrollProgress: number
-  size: number
+  scrollProgressRef: React.MutableRefObject<number>
   theme: 'dark' | 'light'
 }
 
-export default function BotScene({ scrollProgress, size, theme }: BotSceneProps) {
+export default function BotScene({ scrollProgressRef, theme }: BotSceneProps) {
+  const shadowRef = useRef<HTMLDivElement>(null)
+
   return (
-    <div style={{ width: size, height: size, position: 'relative', overflow: 'visible' }}>
+    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'visible' }}>
       {/* Ground reflection */}
-      <div style={{
-        position: 'absolute',
-        bottom: '-5.5%',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '45%',
-        height: '3.5%',
-        background: theme === 'dark'
-          ? 'radial-gradient(ellipse, rgba(234,88,12,0.30) 0%, transparent 70%)'
-          : 'radial-gradient(ellipse, rgba(180,80,10,0.20) 0%, transparent 70%)',
-        filter: 'blur(10px)',
-        borderRadius: '50%',
-        pointerEvents: 'none',  
-      }} />
+      <div
+        ref={shadowRef}
+        style={{
+          position: 'absolute',
+          bottom: '-1.5%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '45%',
+          height: '3.5%',
+          background: theme === 'dark'
+            ? 'radial-gradient(ellipse, rgba(234,88,12,0.30) 0%, transparent 70%)'
+            : 'radial-gradient(ellipse, rgba(180,80,10,0.20) 0%, transparent 70%)',
+          filter: 'blur(10px)',
+          borderRadius: '50%',
+          pointerEvents: 'none',  
+          transition: 'opacity 0.15s ease-out, transform 0.15s ease-out, bottom 0.15s ease-out',
+        }}
+      />
 
       <Canvas
         dpr={[1, 2]}
         key="bot"
         camera={{ position: [0, 0, 3.2], fov: 42 }}
-        style={{ background: 'transparent', overflow: 'visible' }}
+        style={{ width: '100%', height: '100%', background: 'transparent' }}
         gl={{ alpha: true, antialias: true }}
       >
         {/* Ambient light — slightly stronger in light theme for visibility */}
@@ -73,7 +78,7 @@ export default function BotScene({ scrollProgress, size, theme }: BotSceneProps)
         )}
 
         <Float speed={1.4} rotationIntensity={0.07} floatIntensity={0.28}>
-          <OrbGroup scrollProgress={scrollProgress} theme={theme} size={size} />
+          <OrbGroup scrollProgressRef={scrollProgressRef} theme={theme} shadowRef={shadowRef} />
         </Float>
       </Canvas>
     </div>
@@ -104,16 +109,17 @@ export default function BotScene({ scrollProgress, size, theme }: BotSceneProps)
 // OrbGroup — main scene
 // ─────────────────────────────────────────────────────────────
 function OrbGroup({
-  scrollProgress,
+  scrollProgressRef,
   theme,
-  size,
+  shadowRef,
 }: {
-  scrollProgress: number
+  scrollProgressRef: React.MutableRefObject<number>
   theme: 'dark' | 'light'
-  size: number
+  shadowRef: React.RefObject<HTMLDivElement>
 }) {
   const groupRef   = useRef<THREE.Group>(null)
   const actualRotY = useRef(0)
+  const actualScale = useRef(1)
   const isDark     = theme === 'dark'
 
   const interactionRef = useRef({
@@ -122,10 +128,9 @@ function OrbGroup({
     startTime: 0,
   })
 
-  // Spin: scroll 0.15→0.60 → 0→PI
-  const spinT   = Math.max(0, Math.min(1, (scrollProgress - 0.15) / 0.45))
-  const targetY = spinT * Math.PI
-  const faceVisible = targetY > Math.PI * 0.5
+  // Read once at render time for structural decisions (which sub-components to show)
+  const scrollProgressSnap = scrollProgressRef.current
+  const faceVisible = Math.max(0, Math.min(1, (scrollProgressSnap - 0.15) / 0.45)) * Math.PI > Math.PI * 0.5
 
   // Click & Double-click handlers using custom robust debouncing
   const lastClickTimeRef = useRef(0)
@@ -224,7 +229,28 @@ function OrbGroup({
     const isInteracting = nowMs < interactionRef.current.until
     const currentInteraction = interactionRef.current.type
 
+    // Read fresh scroll progress every frame for smooth animation
+    const sp = scrollProgressRef.current
+    const spinT = Math.max(0, Math.min(1, (sp - 0.15) / 0.45))
+    const targetY = spinT * Math.PI
+    const targetScale = Math.max(0.3, 1.0 - sp * 0.35)
+
     actualRotY.current = THREE.MathUtils.lerp(actualRotY.current, targetY, 0.07)
+    actualScale.current = THREE.MathUtils.lerp(actualScale.current, targetScale, 0.07)
+
+    // Update shadow position/scale/opacity dynamically based on current scale and scroll progress
+    if (shadowRef.current) {
+      const s = actualScale.current
+      // Fade out shadow as we scroll past the hero (sp goes from 1.0 to 1.76)
+      const shadowFade = Math.max(0, Math.min(1, 1.0 - (sp - 1.0) * 3.5))
+      
+      shadowRef.current.style.transform = `translateX(-50%) scale(${s})`
+      shadowRef.current.style.opacity = `${s * 0.95 * shadowFade}`
+
+      // Keep shadow close to the bottom of the shrunken orb
+      const bottomOffset = -1.5 + (1 - s) * 44
+      shadowRef.current.style.bottom = `${bottomOffset}%`
+    }
 
     let targetDomY = 0
 
@@ -250,6 +276,9 @@ function OrbGroup({
           groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, actualRotY.current, 0.1)
           groupRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 15) * 0.04 * factor
         }
+        // Apply scroll-driven scale during dizzy (no squash/stretch override)
+        const s = actualScale.current
+        groupRef.current.scale.set(s, s, s)
       } else if (currentInteraction === 'click') {
         // Head tilt acknowledgment
         const progress = elapsed / 1500
@@ -257,11 +286,11 @@ function OrbGroup({
         groupRef.current.rotation.y = actualRotY.current
         groupRef.current.rotation.z = tiltPhase * 0.12
         groupRef.current.rotation.x = tiltPhase * -0.06
+        // Apply scroll-driven scale during click
+        const s = actualScale.current
+        groupRef.current.scale.set(s, s, s)
       } else if (currentInteraction === 'double_click') {
         const progress = elapsed / 1800
-        // Hop translated on HTML Canvas DOM style to prevent edge clipping
-        const hopY = Math.sin(progress * Math.PI) * 0.45
-        targetDomY = -hopY * (size * 0.22)
 
         let scaleY = 1
         let scaleXZ = 1
@@ -284,14 +313,17 @@ function OrbGroup({
           scaleY = 1 + Math.sin(landingProgress * Math.PI) * 0.1
           scaleXZ = 1 / Math.sqrt(scaleY)
         }
-        groupRef.current.scale.set(scaleXZ, scaleY, scaleXZ)
+        // Multiply interaction squash/stretch with scroll-driven uniform scale
+        const s = actualScale.current
+        groupRef.current.scale.set(scaleXZ * s, scaleY * s, scaleXZ * s)
       }
     } else {
-      // Return to normal
+      // Return to normal — apply scroll-driven scale
       groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, 0, 0.1)
       groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, 0.1)
       groupRef.current.rotation.y = actualRotY.current
-      groupRef.current.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1)
+      const s = actualScale.current
+      groupRef.current.scale.lerp(new THREE.Vector3(s, s, s), 0.1)
     }
 
     // Apply HTML Canvas Translation

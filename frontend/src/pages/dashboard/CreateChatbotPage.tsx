@@ -1,13 +1,16 @@
 // src/pages/dashboard/CreateChatbotPage.tsx
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { chatbotsApi } from '../../api/chatbots'
+import { adminApi, type AdminTenant } from '../../api/admin'
+import { useAuthStore } from '../../store/authStore'
 import DashboardLayout from './DashboardLayout'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Card } from '../../components/ui/Card'
 import {
   Globe, GraduationCap, ShoppingCart, Scale, Users,
   Lightbulb, FileText, MessageSquare, AlertTriangle, ArrowLeft,
+  Building2, ChevronDown,
 } from 'lucide-react'
 
 const DOMAINS = [
@@ -20,15 +23,26 @@ const DOMAINS = [
 
 export default function CreateChatbotPage() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const isSuperadmin = user?.is_superadmin ?? false
 
   const [form, setForm] = useState({
     name:          '',
     description:   '',
     domain:        'general',
     system_prompt: '',
+    tenant_id:     '',  // superadmin only
   })
+  const [tenants, setTenants] = useState<AdminTenant[]>([])
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
+
+  // Load tenants for superadmin dropdown
+  useEffect(() => {
+    if (isSuperadmin) {
+      adminApi.listTenants().then(res => setTenants(res.data)).catch(() => {})
+    }
+  }, [isSuperadmin])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,6 +54,7 @@ export default function CreateChatbotPage() {
         description:   form.description || undefined,
         domain:        form.domain,
         system_prompt: form.system_prompt || undefined,
+        tenant_id:     isSuperadmin && form.tenant_id ? form.tenant_id : undefined,
       })
       navigate(`/dashboard/chatbots/${data.slug || data.id}`)
     } catch (err: any) {
@@ -103,6 +118,50 @@ export default function CreateChatbotPage() {
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+              {/* Tenant selector (superadmin only) */}
+              {isSuperadmin && tenants.length > 0 && (
+                <div style={{
+                  display: 'flex', flexDirection: 'column', gap: 6,
+                  padding: '14px 16px',
+                  background: 'rgba(168,85,247,0.04)',
+                  border: '1px solid rgba(168,85,247,0.15)',
+                  borderRadius: 'var(--radius-md)',
+                }}>
+                  <label style={{
+                    ...labelStyle,
+                    color: '#c084fc',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}>
+                    <Building2 size={13} /> Create for tenant
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <ChevronDown size={14} style={{
+                      position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                      color: 'var(--color-muted)', pointerEvents: 'none',
+                    }} />
+                    <select
+                      value={form.tenant_id}
+                      onChange={e => setForm(f => ({ ...f, tenant_id: e.target.value }))}
+                      style={{
+                        ...inputStyle,
+                        appearance: 'none',
+                        paddingRight: 32,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="">Your own tenant (default)</option>
+                      {tenants.map(t => (
+                        <option key={t.id} value={t.id}>{t.name} ({t.plan})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <p style={{
+                    margin: 0, fontSize: 11, color: 'var(--color-subtle)',
+                    fontFamily: 'var(--font-body)',
+                  }}>Leave empty to create under your own tenant.</p>
+                </div>
+              )}
+
               {/* Name */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <label style={labelStyle}>Chatbot name *</label>
@@ -111,7 +170,7 @@ export default function CreateChatbotPage() {
                   onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setError('') }}
                   placeholder="Support Bot, Sales Assistant…"
                   style={inputStyle}
-                  onFocus={e => (e.currentTarget.style.borderColor = 'rgba(234,88,12,0.5)')}
+                  onFocus={e => (e.currentTarget.style.borderColor = isSuperadmin ? 'rgba(168,85,247,0.5)' : 'rgba(234,88,12,0.5)')}
                   onBlur={e => (e.currentTarget.style.borderColor = 'var(--dash-input-border)')}
                 />
               </div>
@@ -126,7 +185,7 @@ export default function CreateChatbotPage() {
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="What does this chatbot help with?"
                   style={inputStyle}
-                  onFocus={e => (e.currentTarget.style.borderColor = 'rgba(234,88,12,0.5)')}
+                  onFocus={e => (e.currentTarget.style.borderColor = isSuperadmin ? 'rgba(168,85,247,0.5)' : 'rgba(234,88,12,0.5)')}
                   onBlur={e => (e.currentTarget.style.borderColor = 'var(--dash-input-border)')}
                 />
               </div>
@@ -143,17 +202,21 @@ export default function CreateChatbotPage() {
                         onClick={() => setForm(f => ({ ...f, domain: d.value }))}
                         style={{
                           padding: '12px 14px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
-                          background: selected ? 'rgba(234,88,12,0.10)' : 'var(--dash-card)',
-                          border: `1.5px solid ${selected ? 'rgba(234,88,12,0.40)' : 'var(--dash-card-border)'}`,
+                          background: selected
+                            ? (isSuperadmin ? 'rgba(168,85,247,0.10)' : 'rgba(234,88,12,0.10)')
+                            : 'var(--dash-card)',
+                          border: `1.5px solid ${selected
+                            ? (isSuperadmin ? 'rgba(168,85,247,0.40)' : 'rgba(234,88,12,0.40)')
+                            : 'var(--dash-card-border)'}`,
                           transition: 'all 0.18s',
                           display: 'flex', alignItems: 'center', gap: 10,
                         }}
                       >
-                        <d.Icon size={16} color={selected ? '#fb923c' : 'var(--color-muted)'} strokeWidth={1.8} />
+                        <d.Icon size={16} color={selected ? (isSuperadmin ? '#c084fc' : '#fb923c') : 'var(--color-muted)'} strokeWidth={1.8} />
                         <div>
                           <p style={{
                             margin: 0, fontSize: 13, fontWeight: 600,
-                            color: selected ? '#fb923c' : 'var(--color-cream)',
+                            color: selected ? (isSuperadmin ? '#c084fc' : '#fb923c') : 'var(--color-cream)',
                             fontFamily: 'var(--font-body)',
                           }}>{d.label}</p>
                           <p style={{
@@ -181,7 +244,7 @@ export default function CreateChatbotPage() {
                     ...inputStyle,
                     resize: 'vertical', lineHeight: 1.6,
                   }}
-                  onFocus={e => (e.currentTarget.style.borderColor = 'rgba(234,88,12,0.5)')}
+                  onFocus={e => (e.currentTarget.style.borderColor = isSuperadmin ? 'rgba(168,85,247,0.5)' : 'rgba(234,88,12,0.5)')}
                   onBlur={e => (e.currentTarget.style.borderColor = 'var(--dash-input-border)')}
                 />
               </div>
@@ -199,12 +262,14 @@ export default function CreateChatbotPage() {
 
               <div style={{ display: 'flex', gap: 12 }}>
                 <button type="submit" disabled={loading} style={{
-                  background: loading ? 'rgba(234,88,12,0.4)' : '#ea580c',
+                  background: loading
+                    ? (isSuperadmin ? 'rgba(168,85,247,0.4)' : 'rgba(234,88,12,0.4)')
+                    : (isSuperadmin ? '#a855f7' : '#ea580c'),
                   color: '#fff', border: 'none', borderRadius: '10px',
                   padding: '12px 26px', fontSize: 14, fontWeight: 700,
                   cursor: loading ? 'wait' : 'pointer',
                   fontFamily: 'var(--font-body)',
-                  boxShadow: loading ? 'none' : '0 4px 16px rgba(234,88,12,0.3)',
+                  boxShadow: loading ? 'none' : (isSuperadmin ? '0 4px 16px rgba(168,85,247,0.3)' : '0 4px 16px rgba(234,88,12,0.3)'),
                   transition: 'all 0.15s',
                 }}>
                   {loading ? 'Creating…' : 'Create chatbot →'}
@@ -232,11 +297,12 @@ export default function CreateChatbotPage() {
             paddingTop: 56,
           }}>
             <Card style={{
-              background: 'rgba(234,88,12,0.04)', borderColor: 'rgba(234,88,12,0.12)',
+              background: isSuperadmin ? 'rgba(168,85,247,0.04)' : 'rgba(234,88,12,0.04)',
+              borderColor: isSuperadmin ? 'rgba(168,85,247,0.12)' : 'rgba(234,88,12,0.12)',
               display: 'flex', flexDirection: 'column', gap: 16,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Lightbulb size={18} color="#fb923c" strokeWidth={2} />
+                <Lightbulb size={18} color={isSuperadmin ? '#c084fc' : '#fb923c'} strokeWidth={2} />
                 <h3 style={{
                   margin: 0, fontSize: 15, fontWeight: 700,
                   color: 'var(--color-cream)', fontFamily: 'var(--font-display)',
@@ -249,7 +315,7 @@ export default function CreateChatbotPage() {
                 { icon: Globe, text: 'Choose the right domain it optimizes chunking & retrieval.' },
               ].map(({ icon: TipIcon, text }, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <TipIcon size={15} color="#fb923c" strokeWidth={1.8} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <TipIcon size={15} color={isSuperadmin ? '#c084fc' : '#fb923c'} style={{ flexShrink: 0, marginTop: 2 }} />
                   <p style={{
                     margin: 0, fontSize: 13, lineHeight: 1.6, color: 'var(--color-muted)',
                     fontFamily: 'var(--font-body)',

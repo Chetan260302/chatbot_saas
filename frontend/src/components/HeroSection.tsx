@@ -15,9 +15,13 @@ export default function HeroSection({ theme }: HeroSectionProps) {
   const charRef    = useRef<HTMLDivElement>(null)
   const textRef    = useRef<HTMLDivElement>(null)
   const hintRef    = useRef<HTMLDivElement>(null)
-  // const [scrollProgress, setScrollProgress] = useState(0)
   const scrollProgressRef = useRef(0)
   const isDark = theme === 'dark'
+
+  // Section-tracking refs (no re-renders needed)
+  const currentSideRef = useRef<'left' | 'right'>('right')
+  const lastSideTweenRef = useRef<gsap.core.Tween | null>(null)
+  const lastOpacityTweenRef = useRef<gsap.core.Tween | null>(null)
 
   // Responsive sizing
   const sizes = useMemo(() => {
@@ -74,13 +78,16 @@ export default function HeroSection({ theme }: HeroSectionProps) {
     }
   }, [isUnlocked])
 
+  // ── Intro animation (before unlock) ──
   useEffect(() => {
     if (isUnlocked) return
 
     // Set initial states for elements
-    gsap.set(charRef.current, { x: 0, scale: 1.0,scaleX: 1,
-    scaleY: 1,
-    clearProps: "transform", opacity: 1 })
+    if (charRef.current) {
+      charRef.current.style.width  = `${sizes.orbSize}px`
+      charRef.current.style.height = `${sizes.orbSize}px`
+    }
+    gsap.set(charRef.current, { x: 0, y: 0, opacity: 1 })
     gsap.set(textRef.current, { x: -80, opacity: 0 })
     gsap.set(hintRef.current, { opacity: 1, y: 0 })
 
@@ -94,17 +101,19 @@ export default function HeroSection({ theme }: HeroSectionProps) {
 
       const tl = gsap.timeline({
         onComplete: () => {
-          gsap.set(charRef.current, {
-            x: orbShiftX,
-            scaleX: 0.65,
-            scaleY: 0.65
-        })
           setIsUnlocked(true)
           animRunningRef.current = false
         }
       })
 
-      // Orb: morph/spin, scale down, shift right
+      // Move the container right
+      tl.to(charRef.current, {
+        x: orbShiftX,
+        duration: 1.8,
+        ease: 'power3.inOut',
+      }, 0)
+
+      // Drive scrollProgress 0→1 via the ref (BotScene reads it in useFrame)
       const progressObj = { value: 0 }
       tl.to(progressObj, {
         value: 1,
@@ -113,14 +122,6 @@ export default function HeroSection({ theme }: HeroSectionProps) {
         onUpdate: () => {
             scrollProgressRef.current = progressObj.value
         }
-      }, 0)
-
-      tl.to(charRef.current, {
-        x: orbShiftX,
-        scaleX: 0.65,
-        scaleY: 0.65,
-        duration: 1.8,
-        ease: 'power3.inOut',
       }, 0)
 
       // Text: slide in
@@ -185,25 +186,145 @@ export default function HeroSection({ theme }: HeroSectionProps) {
     }
   }, [isUnlocked])
 
-  console.log(window.innerHeight)
-  console.log(sizes.orbSize)
-
+  // ── Post-hero: scroll-driven transition + section tracking ──
+  // The SAME bot smoothly flies from its hero position to the top-right corner,
+  // shrinking further via scrollProgress. Then it tracks active sections.
   useEffect(() => {
-  const interval = setInterval(() => {
-    if (charRef.current) {
-      const rect = charRef.current.getBoundingClientRect();
-      console.log("Wrapper:", rect.width, rect.height);
+    if (!isUnlocked || !charRef.current) return
 
-      const canvas = charRef.current.querySelector("canvas");
-      if (canvas) {
-        const canvasRect = canvas.getBoundingClientRect();
-        console.log("Canvas:", canvasRect.width, canvasRect.height);
+    const el = charRef.current
+
+    const onScroll = () => {
+      const y = window.scrollY
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const isMobile = vw < 768
+
+      // ── Transition progress: 0 at top, 1 when hero is fully scrolled out ──
+      const transitionRange = vh * 0.8
+      const rawT = y / transitionRange
+      const t = Math.max(0, Math.min(1, rawT))
+
+      // Easing (ease-in-out quad) for smooth visual interpolation
+      const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
+
+      // ── Update 3D scroll progress: 1 (hero end) → 1.76 (section bot size) ──
+      scrollProgressRef.current = 1 + eased * 0.76
+
+      // ── Position math ──
+      const padding = Math.max(24, vw * 0.03)
+      const orbShiftX = isMobile ? 0 : vw * 0.22
+
+      // Visual size at full transition (scrollProgress = 1.76)
+      const endVisualSize = sizes.orbSize * Math.max(0.3, 1.0 - 1.76 * 0.35)
+
+      // Start: hero end position (GSAP x offset from center)
+      const startX = orbShiftX
+      const startY = 0
+
+      // End: position offsets from the element's natural center (which is viewport center)
+      // Visual center vertically aligned to middle (offset y = 0)
+      const endX_right = vw / 2 - padding - endVisualSize / 2
+      const endX_left  = padding + endVisualSize / 2 - vw / 2
+      const endY = 0
+
+      if (t < 1) {
+        // ── Phase A: Transitioning from hero → section bot ──
+        // Kill active GSAP side/opacity tweens so they don't override our manual scroll-driven position
+        if (lastSideTweenRef.current) {
+          lastSideTweenRef.current.kill()
+          lastSideTweenRef.current = null
+        }
+        if (lastOpacityTweenRef.current) {
+          lastOpacityTweenRef.current.kill()
+          lastOpacityTweenRef.current = null
+        }
+
+        // Reset side to right when near the top of the hero section
+        if (t < 0.05) {
+          currentSideRef.current = 'right'
+        }
+
+        const side = currentSideRef.current
+        const endX = side === 'right' ? endX_right : endX_left
+
+        const currentX = startX + (endX - startX) * eased
+        const currentY = startY + (endY - startY) * eased
+
+        gsap.set(el, { x: currentX, y: currentY })
+
+        // Z-index: rise above page content partway through transition
+        el.style.zIndex = t > 0.3 ? '150' : '2'
+        el.style.pointerEvents = 'auto'
+        el.style.opacity = '1'
+
+      } else {
+        // ── Phase B: Fully transitioned — section tracking mode ──
+        el.style.zIndex = '150'
+
+        // Determine which section is closest to viewport center
+        const features   = document.getElementById('features')
+        const howItWorks = document.getElementById('how-it-works')
+        const pricing    = document.getElementById('pricing')
+
+        const getCenterDist = (section: HTMLElement | null) => {
+          if (!section) return Infinity
+          const r = section.getBoundingClientRect()
+          return Math.abs(r.top + r.height / 2 - vh / 2)
+        }
+
+        const fDist = getCenterDist(features)
+        const hDist = getCenterDist(howItWorks)
+        const pDist = getCenterDist(pricing)
+        const minDist = Math.min(fDist, hDist, pDist)
+
+        let newSide: 'left' | 'right' = 'right'
+        if (minDist === hDist) newSide = 'left'
+
+        // Animate side switch smoothly
+        if (newSide !== currentSideRef.current) {
+          currentSideRef.current = newSide
+          if (lastSideTweenRef.current) lastSideTweenRef.current.kill()
+          lastSideTweenRef.current = gsap.to(el, {
+            x: newSide === 'right' ? endX_right : endX_left,
+            y: endY,
+            duration: 0.9,
+            ease: 'power3.out',
+          })
+        }
+
+        // Visibility: hide near footer
+        const scrollHeight = document.documentElement.scrollHeight
+        const clientHeight = document.documentElement.clientHeight
+        let shouldHide = false
+        if (y > scrollHeight - clientHeight - 200) shouldHide = true
+        if (pricing) {
+          const pRect = pricing.getBoundingClientRect()
+          if (pRect.bottom < 100) shouldHide = true
+        }
+
+        if (lastOpacityTweenRef.current) lastOpacityTweenRef.current.kill()
+        lastOpacityTweenRef.current = gsap.to(el, {
+          opacity: shouldHide ? 0 : 1,
+          y: shouldHide ? endY - 30 : endY,
+          duration: 0.4,
+          ease: 'power2.out',
+          overwrite: 'auto',
+        })
+        el.style.pointerEvents = shouldHide ? 'none' : 'auto'
       }
     }
-  }, 500);
 
-  return () => clearInterval(interval);
-}, []);
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll() // Initial check
+
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (lastSideTweenRef.current) lastSideTweenRef.current.kill()
+      if (lastOpacityTweenRef.current) lastOpacityTweenRef.current.kill()
+    }
+  }, [isUnlocked, sizes.orbSize])
+
   return (
     <div
       ref={sectionRef}
@@ -215,6 +336,25 @@ export default function HeroSection({ theme }: HeroSectionProps) {
           : 'radial-gradient(ellipse at 50% 40%, #fef3e2 0%, #fefce8 35%, #fff7ed 65%)',
       }}
     >
+      {/* ── Fixed Bot — starts centered in hero, transitions to section-bot corner ── */}
+      <div
+        ref={charRef}
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          marginTop:  -sizes.orbSize / 2,
+          marginLeft: -sizes.orbSize / 2,
+          width:  sizes.orbSize,
+          height: sizes.orbSize,
+          zIndex: 2,
+          pointerEvents: 'auto',
+        }}
+      >
+        <BotScene scrollProgressRef={scrollProgressRef} theme={theme} />
+      </div>
+
+      {/* ── Sticky Hero Content ── */}
       <div style={{
         position: 'sticky',
         top: 0,
@@ -223,31 +363,9 @@ export default function HeroSection({ theme }: HeroSectionProps) {
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
+        zIndex: 5,
+        pointerEvents: 'none',
       }}>
-
-        {/* ── Orb — absolutely centered, always in the middle ── */}
-        <div
-          ref={charRef}
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            marginTop: -sizes.orbSize / 2,
-            marginLeft: -sizes.orbSize / 2,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 3,
-            width: sizes.orbSize,
-            height: sizes.orbSize,
-          }}
-        >
-          <BotScene
-            scrollProgress={scrollProgressRef.current}
-            size={sizes.orbSize}
-            theme={theme}
-          />
-        </div>
 
         {/* ── Text — slides in from the left on scroll ── */}
         <div style={{
@@ -330,15 +448,15 @@ function TextContent({ isDark }: { isDark: boolean }) {
         gap: 8,
         background: isDark
           ? 'rgba(120,53,15,0.38)'
-          : 'rgba(120,53,15,0.12)',          // ← was transparent, now visible
+          : 'rgba(120,53,15,0.12)',
         border: `1px solid ${isDark
           ? 'rgba(234,88,12,0.35)'
-          : 'rgba(120,53,15,0.40)'}`,        // ← darker border on light
+          : 'rgba(120,53,15,0.40)'}`,
         borderRadius: 9999,
         padding: '6px 16px',
         fontSize: 12,
         fontWeight: 700,
-        color: isDark ? '#fb923c' : '#7c2d12',  // ← dark brown on light bg
+        color: isDark ? '#fb923c' : '#7c2d12',
         fontFamily: 'Plus Jakarta Sans, sans-serif',
         width: 'fit-content',
       }}>

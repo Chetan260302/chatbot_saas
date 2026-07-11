@@ -1,7 +1,9 @@
 // src/pages/dashboard/AnalyticsPage.tsx
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { analyticsApi } from '../../api/chatbots'
+import { analyticsApi, chatbotsApi, type Chatbot } from '../../api/chatbots'
+import { adminApi, type AdminTenant } from '../../api/admin'
+import { useAuthStore } from '../../store/authStore'
 import DashboardLayout from './DashboardLayout'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { StatCard } from '../../components/ui/StatCard'
@@ -9,6 +11,7 @@ import { Card } from '../../components/ui/Card'
 import {
   BarChart3, MessageSquare, Zap, FileText,
   Bot, Circle, ShieldAlert, TrendingUp,
+  Building2, Calendar, ChevronDown,
 } from 'lucide-react'
 
 interface PerChatbot {
@@ -16,6 +19,7 @@ interface PerChatbot {
   name: string
   slug: string
   is_active: boolean
+  tenant_id: string
   message_count: number
   token_count: number
   document_count: number
@@ -39,19 +43,60 @@ interface AnalyticsData {
 
 export default function AnalyticsPage() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const isSuperadmin = user?.is_superadmin ?? false
+
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [sortKey, setSortKey] = useState<'message_count' | 'token_count' | 'document_count'>('message_count')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
+  // Filters State
+  const [days, setDays] = useState<number>(14)
+  const [chatbotFilter, setChatbotFilter] = useState<string>('')
+  const [tenantFilter, setTenantFilter] = useState<string>('')
+
+  // Populating Filter Options
+  const [chatbots, setChatbots] = useState<Chatbot[]>([])
+  const [tenants, setTenants] = useState<AdminTenant[]>([])
+
+  // Load tenants (superadmin only)
+  useEffect(() => {
+    if (isSuperadmin) {
+      adminApi.listTenants().then(res => setTenants(res.data)).catch(() => {})
+    }
+  }, [isSuperadmin])
+
+  // Load chatbots based on tenant context
+  useEffect(() => {
+    const listPromise = isSuperadmin
+      ? adminApi.listAllChatbots({ tenant_id: tenantFilter || undefined })
+      : chatbotsApi.list()
+
+    listPromise
+      .then(res => {
+        setChatbots(res.data as any)
+        // Reset chatbot filter if the selected bot is no longer in the list
+        if (chatbotFilter && !res.data.some(c => c.id === chatbotFilter)) {
+          setChatbotFilter('')
+        }
+      })
+      .catch(() => {})
+  }, [tenantFilter, isSuperadmin])
+
+  // Fetch overview analytics data based on filters
   useEffect(() => {
     setLoading(true)
-    analyticsApi.overview()
+    analyticsApi.overview({
+      days,
+      chatbot_id: chatbotFilter || undefined,
+      tenant_id: tenantFilter || undefined,
+    })
       .then(res => setData(res.data))
       .catch(err => setError(err.response?.data?.detail || 'Failed to load analytics'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [days, chatbotFilter, tenantFilter])
 
   const handleSort = (key: typeof sortKey) => {
     if (sortKey === key) {
@@ -111,6 +156,133 @@ export default function AnalyticsPage() {
           title="Analytics"
           subtitle="Track chatbot performance and usage metrics across all your bots."
         />
+
+        {/* Filters Bar */}
+        <div style={{
+          display: 'flex',
+          gap: 12,
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          background: 'var(--dash-card)',
+          border: '1px solid var(--dash-card-border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '16px 20px',
+        }}>
+          {/* Time range selection */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Time range</span>
+            <div style={{ position: 'relative' }}>
+              <Calendar size={14} style={{
+                position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                color: 'var(--color-muted)', pointerEvents: 'none',
+              }} />
+              <ChevronDown size={14} style={{
+                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                color: 'var(--color-muted)', pointerEvents: 'none',
+              }} />
+              <select
+                value={days}
+                onChange={(e) => setDays(Number(e.target.value))}
+                style={{
+                  appearance: 'none',
+                  background: 'var(--dash-input-bg)',
+                  border: '1px solid var(--dash-input-border)',
+                  borderRadius: '10px',
+                  padding: '10px 32px 10px 34px',
+                  color: 'var(--color-cream)',
+                  fontSize: 'var(--text-sm)',
+                  fontFamily: 'var(--font-body)',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  minWidth: 150,
+                }}
+              >
+                <option value={7}>Last 7 days</option>
+                <option value={14}>Last 14 days</option>
+                <option value={30}>Last 30 days</option>
+                <option value={90}>Last 90 days</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Tenant filter (superadmin only) */}
+          {isSuperadmin && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tenant</span>
+              <div style={{ position: 'relative' }}>
+                <Building2 size={14} style={{
+                  position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                  color: 'var(--color-muted)', pointerEvents: 'none',
+                }} />
+                <ChevronDown size={14} style={{
+                  position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                  color: 'var(--color-muted)', pointerEvents: 'none',
+                }} />
+                <select
+                  value={tenantFilter}
+                  onChange={(e) => setTenantFilter(e.target.value)}
+                  style={{
+                    appearance: 'none',
+                    background: 'var(--dash-input-bg)',
+                    border: '1px solid var(--dash-input-border)',
+                    borderRadius: '10px',
+                    padding: '10px 32px 10px 34px',
+                    color: 'var(--color-cream)',
+                    fontSize: 'var(--text-sm)',
+                    fontFamily: 'var(--font-body)',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    minWidth: 180,
+                  }}
+                >
+                  <option value="">All tenants (Aggregate)</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Chatbot Filter */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Chatbot</span>
+            <div style={{ position: 'relative' }}>
+              <Bot size={14} style={{
+                position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                color: 'var(--color-muted)', pointerEvents: 'none',
+              }} />
+              <ChevronDown size={14} style={{
+                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                color: 'var(--color-muted)', pointerEvents: 'none',
+              }} />
+              <select
+                value={chatbotFilter}
+                onChange={(e) => setChatbotFilter(e.target.value)}
+                style={{
+                  appearance: 'none',
+                  background: 'var(--dash-input-bg)',
+                  border: '1px solid var(--dash-input-border)',
+                  borderRadius: '10px',
+                  padding: '10px 32px 10px 34px',
+                  color: 'var(--color-cream)',
+                  fontSize: 'var(--text-sm)',
+                  fontFamily: 'var(--font-body)',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  minWidth: 180,
+                }}
+              >
+                <option value="">All chatbots (Aggregate)</option>
+                {chatbots.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {isSuperadmin && (c as any).tenant_name ? `(${ (c as any).tenant_name })` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
 
         {/* Stat cards */}
         <div style={{
@@ -319,18 +491,22 @@ export default function AnalyticsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedBots.map((bot, i) => (
-                      <tr
-                        key={bot.id}
-                        onClick={() => navigate(`/dashboard/chatbots/${bot.slug}`)}
-                        style={{
-                          cursor: 'pointer',
-                          borderBottom: i < sortedBots.length - 1 ? '1px solid var(--dash-card-border)' : 'none',
-                          transition: 'background 0.15s',
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--dash-card-hover)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                      >
+                    {sortedBots.map((bot, i) => {
+                      const isOwnBot = !isSuperadmin || (bot.tenant_id && user?.tenant_id && 
+                        bot.tenant_id.toLowerCase().replace(/[^a-z0-9]/g, '') === user.tenant_id.toLowerCase().replace(/[^a-z0-9]/g, ''))
+                      
+                      return (
+                        <tr
+                          key={bot.id}
+                          onClick={isOwnBot ? () => navigate(`/dashboard/chatbots/${bot.slug}`) : undefined}
+                          style={{
+                            cursor: isOwnBot ? 'pointer' : 'default',
+                            borderBottom: i < sortedBots.length - 1 ? '1px solid var(--dash-card-border)' : 'none',
+                            transition: isOwnBot ? 'background 0.15s' : 'none',
+                          }}
+                          onMouseEnter={isOwnBot ? e => (e.currentTarget.style.background = 'var(--dash-card-hover)') : undefined}
+                          onMouseLeave={isOwnBot ? e => (e.currentTarget.style.background = 'transparent') : undefined}
+                        >
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div style={{
@@ -385,7 +561,7 @@ export default function AnalyticsPage() {
                           {formatTimestamp(bot.last_message_at)}
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </div>

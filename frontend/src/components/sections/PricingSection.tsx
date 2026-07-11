@@ -8,7 +8,7 @@ export default function PricingSection({ theme }: { theme: 'dark' | 'light' }) {
 
   return (
     <section style={{
-      padding: 'clamp(32px, 4vw, 56px) 0 clamp(24px, 3vw, 40px)',
+      padding: 'clamp(32px, 4vw, 56px) 0 clamp(16px, 2vw, 24px)',
       background: isDark ? '#0c0a09' : '#fffbf5',
       position: 'relative',
     }}>

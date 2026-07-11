@@ -1,11 +1,13 @@
 // src/pages/dashboard/DashboardLayout.tsx
-import { useState } from 'react'
+import { useState,useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { useThemeStore } from '../../store/themeStore'
+import { authAPI } from '../../api/auth'
 import {
   LayoutDashboard, Bot, BarChart3, Settings,
   LogOut, Sun, Moon, PanelLeftClose, PanelLeft, BookOpen,
+  Building2, Users, Shield,
 } from 'lucide-react'
 
 const NAV = [
@@ -16,12 +18,29 @@ const NAV = [
   { icon: BookOpen,        label: 'Docs',      href: '/docs' },
 ]
 
+const ADMIN_NAV = [
+  { icon: Building2, label: 'Tenants', href: '/dashboard/admin/tenants' },
+  { icon: Users,     label: 'Users',   href: '/dashboard/admin/users' },
+]
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
+  const { user, setUser, logout } = useAuthStore()
   const { theme, toggleTheme } = useThemeStore()
+  const isSuperadmin = user?.is_superadmin ?? false
   const [collapsed, setCollapsed] = useState(false)
+
+  // Sync user profile on mount to handle DB updates immediately
+  useEffect(() => {
+    authAPI.getMe()
+      .then(res => {
+        if (JSON.stringify(res) !== JSON.stringify(user)) {
+          setUser(res)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const dark = theme === 'dark'
   const sidebarWidth = collapsed ? 64 : 240
@@ -143,6 +162,73 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Link>
             )
           })}
+
+          {/* ── Superadmin section ── */}
+          {isSuperadmin && (
+            <>
+              {/* Divider */}
+              <div style={{
+                height: 1,
+                background: 'var(--dash-card-border)',
+                margin: collapsed ? '8px 8px' : '8px 12px',
+              }} />
+              {!collapsed && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '4px 12px 6px',
+                }}>
+                  <Shield size={11} color="#a855f7" strokeWidth={2.5} />
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
+                    color: '#a855f7', fontFamily: 'var(--font-body)',
+                    textTransform: 'uppercase',
+                  }}>Platform</span>
+                </div>
+              )}
+              {ADMIN_NAV.map((item) => {
+                const active = location.pathname.startsWith(item.href)
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    title={collapsed ? item.label : undefined}
+                    style={{
+                      display:    'flex',
+                      alignItems: 'center',
+                      gap:        10,
+                      padding:    collapsed ? '10px 0' : '10px 12px',
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      borderRadius: 'var(--radius-sm)',
+                      textDecoration: 'none',
+                      color:      active ? '#e9d5ff' : '#a78bfa',
+                      background: active ? 'rgba(168,85,247,0.12)' : 'transparent',
+                      border:     active ? '1px solid rgba(168,85,247,0.25)' : '1px solid transparent',
+                      transition: 'all var(--duration-fast) var(--ease-smooth)',
+                      whiteSpace: 'nowrap',
+                      overflow:   'hidden',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(168,85,247,0.08)'
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'
+                    }}
+                  >
+                    <Icon size={18} strokeWidth={active ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
+                    {!collapsed && (
+                      <span style={{
+                        fontSize: 14, fontWeight: active ? 600 : 400,
+                        fontFamily: 'var(--font-body)',
+                      }}>
+                        {item.label}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })}
+            </>
+          )}
         </nav>
 
         {/* Bottom section: theme toggle + user + logout */}
@@ -182,11 +268,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               background: 'var(--dash-card-hover)',
               borderRadius: 'var(--radius-sm)',
             }}>
-              <p style={{
-                margin: 0, fontSize: 13, fontWeight: 600,
-                color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>{user.full_name}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <p style={{
+                  margin: 0, fontSize: 13, fontWeight: 600,
+                  color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  flex: 1,
+                }}>{user.full_name}</p>
+                {isSuperadmin && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 800, letterSpacing: '0.05em',
+                    color: '#a855f7',
+                    background: 'rgba(168,85,247,0.12)',
+                    border: '1px solid rgba(168,85,247,0.2)',
+                    borderRadius: 4, padding: '2px 5px',
+                    lineHeight: 1, flexShrink: 0,
+                  }}>SUPER</span>
+                )}
+              </div>
               <p style={{
                 margin: '2px 0 0', fontSize: 11,
                 color: 'var(--color-subtle)', fontFamily: 'var(--font-body)',

@@ -10,6 +10,7 @@ export interface Chatbot{
     is_active: boolean
     domain: string
     tenant_id:string
+    tenant_name?: string
     created_at:string
 }
 
@@ -19,6 +20,7 @@ export interface ChatbotCreate {
   system_prompt?: string
   domain?:       string
   widget_config?: Record<string, any>
+  tenant_id?:    string  // superadmin only: create bot for another tenant
 }
 
 export interface Document {
@@ -39,6 +41,9 @@ export interface ChatbotStats {
 export const chatbotsApi = {
   list: () =>
     apiClient.get<Chatbot[]>('/chatbots'),
+
+  listForTenant: (tenantId: string) =>
+    apiClient.get<Chatbot[]>('/chatbots', { params: { tenant_id: tenantId } }),
 
   create: (data: ChatbotCreate) =>
     apiClient.post<Chatbot>('/chatbots', data),
@@ -116,6 +121,6 @@ export const chatApi={
 
 
 export const analyticsApi = {
-  overview: () =>
-    apiClient.get('/analytics/overview'),
+  overview: (params?: { days?: number; chatbot_id?: string; tenant_id?: string }) =>
+    apiClient.get('/analytics/overview', { params }),
 }

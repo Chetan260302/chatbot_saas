@@ -13,7 +13,16 @@
 
 html {
   scroll-behavior: auto; /* GSAP controls scrolling */
-  overflow-x: hidden;
+  overflow-x: clip;
+  scroll-snap-type: y mandatory;
+}
+
+.snap-section {
+  scroll-snap-align: start;
+}
+
+.snap-section--footer {
+  scroll-snap-align: end;
 }
 
 body {
@@ -24,7 +33,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* ── Typography base ─────────────────────────────────────── */

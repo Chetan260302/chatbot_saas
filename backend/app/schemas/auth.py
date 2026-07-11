@@ -54,12 +54,13 @@ class RefreshRequest(BaseModel):
 
 class UserResponse(BaseModel):
     """Safe user data to return in API responses — never include password."""
-    id:        UUID
-    email:     str
-    full_name: str
-    role:      str
-    is_active: bool
-    tenant_id: UUID
+    id:            UUID
+    email:         str
+    full_name:     str
+    role:          str
+    is_active:     bool
+    tenant_id:     UUID
+    is_superadmin: bool = False
 
     model_config = {"from_attributes": True}
 

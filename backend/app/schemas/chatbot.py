@@ -11,6 +11,7 @@ class ChatbotCreate(BaseModel):
     system_prompt: Optional[str] = None
     widget_config: Optional[dict] = {}
     domain:        Optional[str] = "general"
+    tenant_id:     Optional[UUID] = None  # superadmin only: create bot for another tenant
 
 
 class ChatbotUpdate(BaseModel):
@@ -32,6 +33,7 @@ class ChatbotResponse(BaseModel):
     is_active:     bool
     domain:        str
     tenant_id:     UUID
+    tenant_name:   Optional[str] = None  # populated for superadmin views
     created_at:    datetime
 
     model_config = {"from_attributes": True}

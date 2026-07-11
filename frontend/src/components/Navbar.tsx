@@ -187,7 +187,7 @@ export default function Navbar({
                 fontFamily: 'var(--font-body)',
               }}
               onMouseEnter={(e) =>
-                ((e.target as HTMLElement).style.color = '#fff7ed')
+                ((e.target as HTMLElement).style.color = '#fb923c')
               }
               onMouseLeave={(e) =>
                 ((e.target as HTMLElement).style.color = isDark ? '#a8826a' : '#57534e')

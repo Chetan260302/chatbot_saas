@@ -19,12 +19,13 @@ export interface TokenResponse {
 }
 
 export interface UserProfile {
-  id:        string
-  email:     string
-  full_name: string
-  role:      string
-  tenant_id: string
-  is_active: boolean
+  id:            string
+  email:         string
+  full_name:     string
+  role:          string
+  tenant_id:     string
+  is_active:     boolean
+  is_superadmin: boolean
 }
 
 export interface RegisterResponse {

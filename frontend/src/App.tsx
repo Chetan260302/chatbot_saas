@@ -8,7 +8,7 @@ import FeaturesSection from './components/sections/FeaturesSection'
 import HowItWorksSection from './components/sections/HowItWorksSection'
 import PricingSection from './components/sections/PricingSection'
 import Footer from './components/sections/Footer'
-import SectionBot from './components/SectionBot'
+
 
 //Auth
 import LoginPage from "./pages/LoginPage"
@@ -21,6 +21,8 @@ import CreateChatbotPage  from './pages/dashboard/CreateChatbotPage'
 import ChatbotDetailPage  from './pages/dashboard/ChatbotDetailPage'
 import AnalyticsPage      from './pages/dashboard/AnalyticsPage'
 import SettingsPage       from './pages/dashboard/SettingsPage'
+import AdminTenantsPage   from './pages/dashboard/AdminTenantsPage'
+import AdminUsersPage     from './pages/dashboard/AdminUsersPage'
 
 import DocsPage from './pages/DocsPage'
 import ContactPage from './pages/ContactPage'
@@ -40,12 +42,12 @@ function LandingPage({ theme, setTheme }: { theme: 'dark' | 'light', setTheme: (
       <div className="noise-overlay" />
       <div className="ambient-glow ambient-glow--top" />
       <Navbar theme={theme} toggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
-      <HeroSection theme={theme} />
-      <SectionBot theme={theme} />
-      <div id="features"><FeaturesSection theme={theme} /></div>
-      <div id="how-it-works"><HowItWorksSection theme={theme} /></div>
-      <div id="pricing"><PricingSection theme={theme} /></div>
-      <Footer theme={theme} />
+      <div className="snap-section"><HeroSection theme={theme} /></div>
+
+      <div id="features" className="snap-section"><FeaturesSection theme={theme} /></div>
+      <div id="how-it-works" className="snap-section"><HowItWorksSection theme={theme} /></div>
+      <div id="pricing" className="snap-section"><PricingSection theme={theme} /></div>
+      <div className="snap-section snap-section--footer"><Footer theme={theme} /></div>
     </div>
   )
 }
@@ -86,6 +88,12 @@ export default function App() {
         } />
         <Route path="/dashboard/settings" element={
           <Protected><SettingsPage /></Protected>
+        } />
+        <Route path="/dashboard/admin/tenants" element={
+          <Protected><AdminTenantsPage /></Protected>
+        } />
+        <Route path="/dashboard/admin/users" element={
+          <Protected><AdminUsersPage /></Protected>
         } />
         <Route path="/docs" element={<DocsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

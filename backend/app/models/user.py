@@ -28,13 +28,14 @@ class User(Base, UUIDMixin, TimestampMixin):
     role            = Column(String(50), default=UserRole.OWNER, nullable=False)
     is_active       = Column(Boolean, default=True, nullable=False)
     is_verified     = Column(Boolean, default=False, nullable=False)
-    # is_verified: email verification — we'll add email later
+    # is_verified: email verification — add email later
 
     # Foreign key — which company this user belongs to
     tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
 
     # Relationships
     tenant   = relationship("Tenant", back_populates="users")
+    is_superadmin = Column(Boolean, default=False, nullable=False)
 
     def __repr__(self):
         return f"<User {self.email} ({self.role})>"

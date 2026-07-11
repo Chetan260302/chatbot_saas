@@ -1,5 +1,5 @@
 # backend/app/api/v1/endpoints/documents.py
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from uuid import UUID
@@ -71,7 +71,6 @@ async def delete_document(
     )
     doc = result.scalar_one_or_none()
     if not doc:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Document not found")
     await db.delete(doc)
     await db.commit()
