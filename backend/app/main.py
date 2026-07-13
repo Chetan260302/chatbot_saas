@@ -19,6 +19,7 @@ from app.api.v1.endpoints.team      import router as team_router
 
 from sqlalchemy import text
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Runs on startup and shutdown."""
@@ -36,6 +37,9 @@ async def lifespan(app: FastAPI):
     print("👋 Server shutting down")
 
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Main App — private/dashboard routes (strict CORS)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app = FastAPI(
     title=settings.APP_NAME,
     version="1.0.0",
@@ -45,8 +49,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── CORS Middleware ───────────────────────────────────────────────
-# Allows the React frontend (port 5173) to call the API (port 8000)
+# CORS for dashboard / admin — only trusted origins, with cookies
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -55,40 +58,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.middleware("http")
-async def add_public_cors_headers(request, call_next):
-    # Handle preflight OPTIONS request for public endpoints
-    if request.method == "OPTIONS" and request.url.path.startswith("/api/v1/public/"):
-        from fastapi.responses import Response
-        return Response(
-            status_code=200,
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "POST, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, X-API-Key",
-            }
-        )
-
-    response = await call_next(request)
-
-    if request.url.path.startswith("/api/v1/public/"):
-        response.headers["Access-Control-Allow-Origin"] = "*"
-    return response
-
-
-# from app.api.v1 import router as api_router
-
-app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
+# ── Private routers (require JWT / session cookie) ────────────────
+app.include_router(auth_router,      prefix=settings.API_V1_PREFIX)
 app.include_router(chatbots_router,  prefix=settings.API_V1_PREFIX)
 app.include_router(documents_router, prefix=settings.API_V1_PREFIX)
 app.include_router(chat_router,      prefix=settings.API_V1_PREFIX)
+app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)
+app.include_router(admin_router,     prefix=settings.API_V1_PREFIX)
+app.include_router(team_router,      prefix=settings.API_V1_PREFIX)
 
-app.include_router(public_chat_router, prefix=settings.API_V1_PREFIX)
-app.include_router(analytics_router,   prefix=settings.API_V1_PREFIX)
-app.include_router(admin_router,       prefix=settings.API_V1_PREFIX)
-app.include_router(team_router,        prefix=settings.API_V1_PREFIX)
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Public Sub-App — widget / embeddable routes (permissive CORS)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Mounted as a separate FastAPI app so it gets its own CORSMiddleware
+# instance. This is the idiomatic FastAPI pattern for dual-CORS.
+#
+# Security notes:
+#   • allow_credentials=False  → browsers won't send cookies/tokens
+#   • Authentication is via X-API-Key header, not cookies
+#   • Rate limiting is already applied on these endpoints
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+public_app = FastAPI(
+    title=f"{settings.APP_NAME} — Public Widget API",
+    version="1.0.0",
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url=None,
+)
+
+# CORS for widgets — any origin, NO credentials (API-key auth only)
+public_app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,       # ← critical: never send cookies cross-origin
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-API-Key"],
+)
+
+# The public_chat router has prefix="/public", so its endpoints sit at
+# /public/chat/stream. After mounting at /api/v1, full path becomes
+# /api/v1/public/chat/stream — same as before. No URL changes needed.
+public_app.include_router(public_chat_router)
+
+# Mount the public sub-app on the main app
+# Path: /api/v1  +  router prefix /public  →  /api/v1/public/chat/stream
+app.mount(f"{settings.API_V1_PREFIX}", public_app)
+
+
+# ── Root-level endpoints ──────────────────────────────────────────
 @app.get("/")
 async def root():
     """Root endpoint used for a quick sanity check."""
