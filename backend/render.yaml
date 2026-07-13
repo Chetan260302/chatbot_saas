@@ -34,4 +34,4 @@ services:
       - key: GROQ_MODEL
         sync: false
       - key: ALLOWED_ORIGINS
-        value: "*"
+        value: "http://localhost:5173"

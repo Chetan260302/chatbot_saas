@@ -20,10 +20,21 @@ class Settings(BaseSettings):
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
+        if isinstance(v, list):
             return v
+        if isinstance(v, str):
+            v = v.strip()
+            # JSON array string like '["http://localhost:5173"]'
+            if v.startswith("["):
+                import json
+                try:
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return [str(i).strip() for i in parsed]
+                except json.JSONDecodeError:
+                    pass
+            # Comma-separated string like "http://localhost:5173,https://example.com"
+            return [i.strip() for i in v.split(",") if i.strip()]
         raise ValueError(v)
 
     # ── Database ──────────────────────────────────────
