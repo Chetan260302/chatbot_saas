@@ -35,3 +35,7 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         value: "http://localhost:5173"
+      - key: HF_HOME
+        value: ./hf_cache
+      - key: PYTHONUNBUFFERED
+        value: "1"
