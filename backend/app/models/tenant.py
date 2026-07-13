@@ -1,5 +1,5 @@
 # backend/app/models/tenant.py
-from sqlalchemy import Column, String, Boolean, Text
+from sqlalchemy import Column, String, Boolean, Text, DateTime
 from sqlalchemy.orm import relationship
 from app.db.base import Base, TimestampMixin, UUIDMixin
 import secrets
@@ -18,6 +18,9 @@ class Tenant(Base, UUIDMixin, TimestampMixin):
 
     plan        = Column(String(50), default="free", nullable=False)
     # Plans: free | starter | growth | enterprise
+
+    trial_ends_at   = Column(DateTime, nullable=True)
+    plan_started_at = Column(DateTime, nullable=True)
 
     is_active   = Column(Boolean, default=True, nullable=False)
 

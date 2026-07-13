@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { chatbotsApi, documentsApi, type Chatbot } from '../../api/chatbots'
+import { authAPI, type TenantUsage } from '../../api/auth'
 import { useAuthStore } from '../../store/authStore'
 import DashboardLayout from './DashboardLayout'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -13,6 +14,7 @@ import {
   Activity, ArrowUpRight, Circle,
   BookOpen,
 } from 'lucide-react'
+import { Badge } from '../../components/ui/Badge'
 
 interface BotHealth {
   id: string
@@ -30,6 +32,7 @@ export default function OverviewPage() {
   const { user } = useAuthStore()
 
   const [chatbots, setChatbots] = useState<Chatbot[]>([])
+  const [usage, setUsage] = useState<TenantUsage | null>(null)
   const [botHealth, setBotHealth] = useState<BotHealth[]>([])
   const [totalDocs, setTotalDocs] = useState(0)
   const [totalMessages, setTotalMessages] = useState(0)
@@ -40,49 +43,53 @@ export default function OverviewPage() {
   useEffect(() => {
     setLoading(true)
 
-    chatbotsApi.list()
-      .then(async (res) => {
-        const bots = res.data
-        setChatbots(bots)
+    Promise.all([
+      chatbotsApi.list()
+        .then(async (res) => {
+          const bots = res.data
+          setChatbots(bots)
 
-        // Fetch stats and documents count for all bots in parallel
-        try {
-          const statsPromises = bots.map(b => chatbotsApi.stats(b.id).catch(() => ({ data: { total_messages: 0, total_tokens: 0 } })))
-          const docsPromises = bots.map(b => documentsApi.list(b.id).catch(() => ({ data: [] })))
+          // Fetch stats and documents count for all bots in parallel
+          try {
+            const statsPromises = bots.map(b => chatbotsApi.stats(b.id).catch(() => ({ data: { total_messages: 0, total_tokens: 0 } })))
+            const docsPromises = bots.map(b => documentsApi.list(b.id).catch(() => ({ data: [] })))
 
-          const statsResults = await Promise.all(statsPromises)
-          const docsResults = await Promise.all(docsPromises)
+            const statsResults = await Promise.all(statsPromises)
+            const docsResults = await Promise.all(docsPromises)
 
-          const msgSum = statsResults.reduce((sum, current) => sum + (current.data?.total_messages || 0), 0)
-          const tokSum = statsResults.reduce((sum, current) => sum + (current.data?.total_tokens || 0), 0)
-          const docsSum = docsResults.reduce((sum, current) => sum + (current.data?.length || 0), 0)
+            const msgSum = statsResults.reduce((sum, current) => sum + (current.data?.total_messages || 0), 0)
+            const tokSum = statsResults.reduce((sum, current) => sum + (current.data?.total_tokens || 0), 0)
+            const docsSum = docsResults.reduce((sum, current) => sum + (current.data?.length || 0), 0)
 
-          setTotalMessages(msgSum)
-          setTotalTokens(tokSum)
-          setTotalDocs(docsSum)
+            setTotalMessages(msgSum)
+            setTotalTokens(tokSum)
+            setTotalDocs(docsSum)
 
-          // Build per-bot health data
-          const healthData: BotHealth[] = bots.map((bot, i) => ({
-            id: bot.id,
-            name: bot.name,
-            slug: bot.slug || bot.id,
-            isActive: bot.is_active,
-            messageCount: statsResults[i]?.data?.total_messages || 0,
-            tokenCount: statsResults[i]?.data?.total_tokens || 0,
-            docCount: docsResults[i]?.data?.length || 0,
-            createdAt: bot.created_at,
-          }))
-          setBotHealth(healthData)
-        } catch (err) {
-          console.error('Error fetching dashboard sub-resources:', err)
-        }
-      })
-      .catch((err) => {
-        setError(err.response?.data?.detail || 'Failed to fetch dashboard data')
-      })
-      .finally(() => {
-        setLoading(false)
-      })
+            // Build per-bot health data
+            const healthData: BotHealth[] = bots.map((bot, i) => ({
+              id: bot.id,
+              name: bot.name,
+              slug: bot.slug || bot.id,
+              isActive: bot.is_active,
+              messageCount: statsResults[i]?.data?.total_messages || 0,
+              tokenCount: statsResults[i]?.data?.total_tokens || 0,
+              docCount: docsResults[i]?.data?.length || 0,
+              createdAt: bot.created_at,
+            }))
+            setBotHealth(healthData)
+          } catch (err) {
+            console.error('Error fetching dashboard sub-resources:', err)
+          }
+        })
+        .catch((err) => {
+          setError(err.response?.data?.detail || 'Failed to fetch dashboard data')
+        }),
+      authAPI.getTenantUsage()
+        .then(res => setUsage(res))
+        .catch(err => console.error('Failed to load usage summary:', err))
+    ]).finally(() => {
+      setLoading(false)
+    })
   }, [])
 
   function formatTimeAgo(date: Date) {
@@ -455,6 +462,77 @@ export default function OverviewPage() {
               </button>
             </Card>
 
+            {/* Plan Usage Card */}
+            {usage && (
+              <Card style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Zap size={16} color="#fb923c" />
+                    <span style={{
+                      fontSize: 'var(--text-xs)', fontWeight: 600,
+                      color: 'var(--color-muted)', fontFamily: 'var(--font-body)',
+                      textTransform: 'uppercase', letterSpacing: '0.05em',
+                    }}>Plan Usage</span>
+                  </div>
+                  <Badge variant={usage.plan === 'free' ? 'warning' : 'default'} style={{ textTransform: 'uppercase' }}>
+                    {usage.plan}
+                  </Badge>
+                </div>
+
+                {usage.plan === 'free' && usage.trial_days_remaining !== null && (
+                  <div style={{
+                    background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)',
+                    borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#fbbf24',
+                    fontFamily: 'var(--font-body)', display: 'flex', alignItems: 'center', gap: 8,
+                  }}>
+                    <Circle size={8} fill="currentColor" />
+                    <span>{usage.trial_days_remaining} days left in trial</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {/* Chatbots Progress */}
+                  <ProgressBar
+                    label="Chatbots"
+                    current={usage.usage.chatbots}
+                    limit={usage.limits.chatbots}
+                  />
+
+                  {/* Conversations Progress */}
+                  <ProgressBar
+                    label="Conversations"
+                    current={usage.usage.conversations}
+                    limit={usage.limits.conversations}
+                  />
+
+                  {/* Messages Progress */}
+                  <ProgressBar
+                    label="Messages"
+                    current={usage.usage.messages}
+                    limit={usage.limits.messages}
+                  />
+                </div>
+
+                {(usage.usage.conversations / usage.limits.conversations > 0.8 ||
+                  usage.usage.messages / usage.limits.messages > 0.8 ||
+                  usage.usage.chatbots / usage.limits.chatbots > 0.8) && (
+                  <button
+                    onClick={() => navigate('/dashboard/settings')}
+                    style={{
+                      marginTop: 6,
+                      background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+                      color: '#fff', border: 'none', borderRadius: 8,
+                      padding: '8px 16px', fontSize: 13, fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'var(--font-body)',
+                      boxShadow: '0 4px 12px rgba(139,92,246,0.2)',
+                    }}
+                  >
+                    Upgrade Plan
+                  </button>
+                )}
+              </Card>
+            )}
+
             {/* Token usage summary mini card */}
             <Card style={{ padding: '16px 20px' }}>
               <div style={{
@@ -484,5 +562,31 @@ export default function OverviewPage() {
         </div>
       </div>
     </DashboardLayout>
+  )
+}
+
+function ProgressBar({ label, current, limit }: { label: string, current: number, limit: number }) {
+  const percent = limit > 0 ? Math.min(100, (current / limit) * 100) : 0
+  const isHigh = percent >= 80
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontFamily: 'var(--font-body)' }}>
+        <span style={{ color: 'var(--color-muted)' }}>{label}</span>
+        <span style={{ color: 'var(--color-cream)', fontWeight: 600 }}>
+          {current} / {limit >= 999999 ? '∞' : limit}
+        </span>
+      </div>
+      <div style={{ height: 6, background: 'var(--dash-card-border)', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${percent}%`,
+          background: isHigh
+            ? 'linear-gradient(90deg, #ef4444, #f87171)'
+            : 'linear-gradient(90deg, #ea580c, #fb923c)',
+          borderRadius: 3,
+          transition: 'width 0.4s ease-out'
+        }} />
+      </div>
+    </div>
   )
 }

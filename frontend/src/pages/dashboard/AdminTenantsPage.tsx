@@ -38,7 +38,7 @@ export default function AdminTenantsPage() {
     return () => clearTimeout(timer)
   }, [search])
 
-  const handleToggle = async (tenantId: string, currentStatus: boolean) => {
+  const handleToggle = async (tenantId: string) => {
     setToggling(tenantId)
     try {
       const res = await adminApi.toggleTenant(tenantId)
@@ -247,7 +247,7 @@ export default function AdminTenantsPage() {
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ display: 'flex', gap: 8 }} onClick={e => e.stopPropagation()}>
                             <button
-                              onClick={() => handleToggle(tenant.id, tenant.is_active)}
+                              onClick={() => handleToggle(tenant.id)}
                               disabled={toggling === tenant.id}
                               title={tenant.is_active ? 'Deactivate tenant' : 'Activate tenant'}
                               style={{

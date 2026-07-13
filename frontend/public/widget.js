@@ -121,6 +121,12 @@
       }),
     })
 
+    if (!res.ok) {
+      botDiv.remove()
+      addMessage('bot', 'This assistant is temporarily unavailable. Please contact the business directly.')
+      return
+    }
+
     const reader  = res.body.getReader()
     const decoder = new TextDecoder()
     while (true) {

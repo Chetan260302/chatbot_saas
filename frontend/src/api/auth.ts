@@ -18,6 +18,24 @@ export interface TokenResponse {
   token_type:    string
 }
 
+export interface TenantUsage {
+  plan: string
+  trial_ends_at: string | null
+  trial_days_remaining: number | null
+  period_start: string
+  usage: {
+    chatbots: number
+    conversations: number
+    messages: number
+  }
+  limits: {
+    chatbots: number
+    conversations: number
+    messages: number
+    documents_per_chatbot: number
+  }
+}
+
 export interface UserProfile {
   id:            string
   email:         string
@@ -53,6 +71,11 @@ export const authAPI={
     // Get tenant details including API key
     getTenantMe: async () => {
         const response = await apiClient.get<{ id: string; name: string; api_key: string; plan: string }>('/auth/tenant/me')
+        return response.data
+    },
+    // Get tenant plan usage telemetry
+    getTenantUsage: async () => {
+        const response = await apiClient.get<TenantUsage>('/auth/tenant/usage')
         return response.data
     },
     changePassword: async (data: any) => {

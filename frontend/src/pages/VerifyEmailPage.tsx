@@ -1,5 +1,5 @@
 // src/pages/VerifyEmailPage.tsx
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { authAPI } from '../api/auth'
 import { useThemeStore } from '../store/themeStore'
@@ -14,6 +14,7 @@ export default function VerifyEmailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const called = useRef(false)
 
   useEffect(() => {
     if (!token) {
@@ -22,13 +23,22 @@ export default function VerifyEmailPage() {
       return
     }
 
+    if (called.current) return
+    called.current = true
+
+    setError('')
+    setSuccess(false)
+    setLoading(true)
+
     authAPI.verifyEmail(token)
       .then(() => {
         setSuccess(true)
+        setError('')
       })
       .catch((err: any) => {
         const msg = err.response?.data?.detail || 'Verification failed. The token may be expired.'
         setError(msg)
+        setSuccess(false)
       })
       .finally(() => {
         setLoading(false)

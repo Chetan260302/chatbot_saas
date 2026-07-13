@@ -14,6 +14,7 @@ const NAV = [
   { icon: LayoutDashboard, label: 'Overview',  href: '/dashboard' },
   { icon: Bot,             label: 'Chatbots',  href: '/dashboard/chatbots' },
   { icon: BarChart3,       label: 'Analytics', href: '/dashboard/analytics' },
+  { icon: Users,           label: 'Team',      href: '/dashboard/team', roles: ['owner', 'admin'] },
   { icon: Settings,        label: 'Settings',  href: '/dashboard/settings' },
   { icon: BookOpen,        label: 'Docs',      href: '/docs' },
 ]
@@ -30,6 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { theme, toggleTheme } = useThemeStore()
   const isSuperadmin = user?.is_superadmin ?? false
   const [collapsed, setCollapsed] = useState(false)
+  const [usage, setUsage] = useState<any | null>(null)
 
   // Sync user profile on mount to handle DB updates immediately
   useEffect(() => {
@@ -39,6 +41,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setUser(res)
         }
       })
+      .catch(() => {})
+
+    authAPI.getTenantUsage()
+      .then(res => setUsage(res))
       .catch(() => {})
   }, [])
 
@@ -118,7 +124,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav links */}
         <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {NAV.map((item) => {
+          {NAV.filter((item: any) => {
+            if (!item.roles) return true  // no role restriction
+            return isSuperadmin || item.roles.includes(user?.role)
+          }).map((item) => {
             const active = item.href === '/dashboard'
               ? location.pathname === '/dashboard'
               : location.pathname.startsWith(item.href)
@@ -201,7 +210,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       justifyContent: collapsed ? 'center' : 'flex-start',
                       borderRadius: 'var(--radius-sm)',
                       textDecoration: 'none',
-                      color:      active ? '#e9d5ff' : '#a78bfa',
+                      color:      active ? '#9637fbff' : '#a78bfa',
                       background: active ? 'rgba(168,85,247,0.12)' : 'transparent',
                       border:     active ? '1px solid rgba(168,85,247,0.25)' : '1px solid transparent',
                       transition: 'all var(--duration-fast) var(--ease-smooth)',
@@ -291,6 +300,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 color: 'var(--color-subtle)', fontFamily: 'var(--font-body)',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>{user.email}</p>
+            </div>
+          )}
+
+          {/* Plan badge */}
+          {!collapsed && usage && (
+            <div style={{
+              padding: '6px 12px 10px',
+              fontFamily: 'var(--font-body)',
+              fontSize: 11,
+              color: 'var(--color-muted)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <span>Plan: <strong style={{ color: '#fb923c', textTransform: 'capitalize' }}>{usage.plan}</strong></span>
+              {usage.plan === 'free' && usage.trial_days_remaining !== null && (
+                <span style={{ color: '#fbbf24', fontWeight: 600 }}>{usage.trial_days_remaining}d left</span>
+              )}
             </div>
           )}
 

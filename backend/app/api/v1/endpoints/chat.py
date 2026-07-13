@@ -84,6 +84,18 @@ async def chat_stream(
     tenant: Tenant       = Depends(get_current_tenant),
     db:     AsyncSession = Depends(get_db),
 ):
+    from app.services.usage_service import check_can_send_message
+    usage_check = await check_can_send_message(tenant, db)
+    if not usage_check["allowed"]:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "plan_limit_reached",
+                "reason": usage_check["reason"],
+                "message": usage_check["detail"]
+            }
+        )
+
     result = await db.execute(
         select(Chatbot).where(
             Chatbot.id        == data.chatbot_id,

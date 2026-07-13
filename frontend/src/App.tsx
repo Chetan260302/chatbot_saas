@@ -23,6 +23,7 @@ import AnalyticsPage      from './pages/dashboard/AnalyticsPage'
 import SettingsPage       from './pages/dashboard/SettingsPage'
 import AdminTenantsPage   from './pages/dashboard/AdminTenantsPage'
 import AdminUsersPage     from './pages/dashboard/AdminUsersPage'
+import TeamPage           from './pages/dashboard/TeamPage'
 
 import DocsPage from './pages/DocsPage'
 import ContactPage from './pages/ContactPage'
@@ -88,6 +89,9 @@ export default function App() {
         } />
         <Route path="/dashboard/settings" element={
           <Protected><SettingsPage /></Protected>
+        } />
+        <Route path="/dashboard/team" element={
+          <Protected><TeamPage /></Protected>
         } />
         <Route path="/dashboard/admin/tenants" element={
           <Protected><AdminTenantsPage /></Protected>

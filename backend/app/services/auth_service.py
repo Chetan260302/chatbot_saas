@@ -1,6 +1,6 @@
 # backend/app/services/auth_service.py
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from fastapi import HTTPException, status
 from app.models.user import User, UserRole
 from app.models.tenant import Tenant
@@ -22,8 +22,10 @@ async def register_tenant(data: TenantRegisterRequest, db: AsyncSession) -> Regi
     Creates a new tenant (company) + owner user in one transaction.
     This is what happens when someone signs up on your SaaS.
     """
-    # Check email not already used
-    existing = await db.execute(select(User).where(User.email == data.email))
+    # Check email not already used (case-insensitive)
+    existing = await db.execute(
+        select(User).where(func.lower(User.email) == func.lower(data.email.strip()))
+    )
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -39,7 +41,15 @@ async def register_tenant(data: TenantRegisterRequest, db: AsyncSession) -> Regi
         counter += 1
 
     # Create tenant
-    tenant = Tenant(name=data.company_name, slug=slug)
+    from datetime import datetime, timedelta
+    now_dt = datetime.utcnow()
+    tenant = Tenant(
+        name=data.company_name,
+        slug=slug,
+        plan="free",
+        plan_started_at=now_dt,
+        trial_ends_at=now_dt + timedelta(days=30),
+    )
     db.add(tenant)
     await db.flush()  # flush to get tenant.id without committing yet
 
@@ -75,13 +85,21 @@ async def register_tenant(data: TenantRegisterRequest, db: AsyncSession) -> Regi
 
 async def login_user(data: LoginRequest, db: AsyncSession) -> TokenResponse:
     """Verify credentials and return JWT tokens."""
-    result = await db.execute(select(User).where(User.email == data.email))
+    result = await db.execute(
+        select(User).where(func.lower(User.email) == func.lower(data.email.strip()))
+    )
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(data.password, user.hashed_password):
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email is not registered"
+        )
+
+    if not verify_password(data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
+            detail="Incorrect password"
         )
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Account is deactivated")

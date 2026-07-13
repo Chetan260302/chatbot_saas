@@ -15,6 +15,7 @@ from app.api.v1.endpoints.chat      import router as chat_router
 from app.api.v1.endpoints.public_chat import router as public_chat_router
 from app.api.v1.endpoints.analytics import router as analytics_router
 from app.api.v1.endpoints.admin     import router as admin_router
+from app.api.v1.endpoints.team      import router as team_router
 
 from sqlalchemy import text
 
@@ -26,6 +27,8 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         await conn.execute(text("ALTER TABLE chatbots ADD COLUMN IF NOT EXISTS slug VARCHAR(255) UNIQUE;"))
         await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN DEFAULT FALSE;"))
+        await conn.execute(text("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP WITHOUT TIME ZONE;"))
+        await conn.execute(text("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan_started_at TIMESTAMP WITHOUT TIME ZONE;"))
     print(f"✅ {settings.APP_NAME} started — {settings.ENVIRONMENT} mode")
     yield
     # Shutdown: cleanup if needed
@@ -84,6 +87,7 @@ app.include_router(chat_router,      prefix=settings.API_V1_PREFIX)
 app.include_router(public_chat_router, prefix=settings.API_V1_PREFIX)
 app.include_router(analytics_router,   prefix=settings.API_V1_PREFIX)
 app.include_router(admin_router,       prefix=settings.API_V1_PREFIX)
+app.include_router(team_router,        prefix=settings.API_V1_PREFIX)
 
 @app.get("/")
 async def root():

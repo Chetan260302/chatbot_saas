@@ -1,6 +1,6 @@
 import React from 'react'
 
-type BadgeVariant = 'success' | 'warning' | 'info' | 'secondary'
+type BadgeVariant = 'success' | 'warning' | 'info' | 'secondary' | 'default'
 
 interface BadgeProps {
   children: React.ReactNode
@@ -29,6 +29,7 @@ export function Badge({ children, variant = 'secondary', style }: BadgeProps) {
           color: '#60a5fa',
           border: '1px solid rgba(59, 130, 246, 0.15)',
         }
+      case 'default':
       case 'secondary':
       default:
         return {

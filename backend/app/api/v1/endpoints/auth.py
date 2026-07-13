@@ -2,7 +2,7 @@
 from app.core.dependencies import get_current_tenant
 from app.models.tenant import Tenant
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import JWTError
 from fastapi import HTTPException
@@ -53,8 +53,29 @@ async def get_me(current_user: User = Depends(get_current_user)):
 # backend/app/api/v1/endpoints/auth.py — add this
 
 @router.get("/tenant/me")
-async def get_my_tenant(tenant: Tenant = Depends(get_current_tenant)):
-    return {"id": tenant.id, "name": tenant.name, "api_key": tenant.api_key, "plan": tenant.plan}
+async def get_my_tenant(
+    current_user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+):
+    # Only owners (and superadmins) can see the full API key
+    show_key = current_user.is_superadmin or current_user.role == "owner"
+    return {
+        "id": tenant.id,
+        "name": tenant.name,
+        "api_key": tenant.api_key if show_key else "••••••••••••••••",
+        "plan": tenant.plan,
+    }
+
+
+from app.services import usage_service
+
+@router.get("/tenant/usage")
+async def get_tenant_usage(
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve plan limits and current period usage statistics."""
+    return await usage_service.get_usage_summary(tenant, db)
 
 
 from app.core.security import verify_password, hash_password
@@ -86,7 +107,9 @@ async def forgot_password(
     db: AsyncSession = Depends(get_db)
 ):
     """Generates a secure password reset token and saves in Redis."""
-    result = await db.execute(select(User).where(User.email == data.email))
+    result = await db.execute(
+        select(User).where(func.lower(User.email) == func.lower(data.email.strip()))
+    )
     user = result.scalar_one_or_none()
     
     if not user:

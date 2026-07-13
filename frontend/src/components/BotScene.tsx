@@ -115,7 +115,7 @@ function OrbGroup({
 }: {
   scrollProgressRef: React.MutableRefObject<number>
   theme: 'dark' | 'light'
-  shadowRef: React.RefObject<HTMLDivElement>
+  shadowRef: React.RefObject<HTMLDivElement | null>
 }) {
   const groupRef   = useRef<THREE.Group>(null)
   const actualRotY = useRef(0)

@@ -26,6 +26,18 @@ export default function CreateChatbotPage() {
   const { user } = useAuthStore()
   const isSuperadmin = user?.is_superadmin ?? false
 
+  const [tenants, setTenants] = useState<AdminTenant[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [limitError, setLimitError] = useState<{
+    code: string
+    reason: string
+    current_count: number
+    limit: number
+    suggested_plan: string
+    message: string
+  } | null>(null)
+
   const [form, setForm] = useState({
     name:          '',
     description:   '',
@@ -33,9 +45,6 @@ export default function CreateChatbotPage() {
     system_prompt: '',
     tenant_id:     '',  // superadmin only
   })
-  const [tenants, setTenants] = useState<AdminTenant[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState('')
 
   // Load tenants for superadmin dropdown
   useEffect(() => {
@@ -48,6 +57,8 @@ export default function CreateChatbotPage() {
     e.preventDefault()
     if (!form.name.trim()) { setError('Name is required'); return }
     setLoading(true)
+    setError('')
+    setLimitError(null)
     try {
       const { data } = await chatbotsApi.create({
         name:          form.name,
@@ -58,7 +69,13 @@ export default function CreateChatbotPage() {
       })
       navigate(`/dashboard/chatbots/${data.slug || data.id}`)
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create chatbot')
+      const detail = err.response?.data?.detail
+      if (detail && typeof detail === 'object' && detail.code === 'plan_limit_reached') {
+        setLimitError(detail)
+        setError(detail.message)
+      } else {
+        setError(detail || 'Failed to create chatbot')
+      }
     } finally {
       setLoading(false)
     }
@@ -250,13 +267,35 @@ export default function CreateChatbotPage() {
               </div>
 
               {error && (
-                <div style={{
-                  padding: '11px 14px', background: 'rgba(239,68,68,0.08)',
-                  border: '1px solid rgba(239,68,68,0.20)', borderRadius: '8px',
-                  color: '#fca5a5', fontSize: 13, fontFamily: 'var(--font-body)',
-                  display: 'flex', alignItems: 'center', gap: 8,
-                }}>
-                  <AlertTriangle size={14} /> {error}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{
+                    padding: '11px 14px', background: 'rgba(239,68,68,0.08)',
+                    border: '1px solid rgba(239,68,68,0.20)', borderRadius: '8px',
+                    color: '#fca5a5', fontSize: 13, fontFamily: 'var(--font-body)',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                  }}>
+                    <AlertTriangle size={14} /> {error}
+                  </div>
+                  {limitError && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        import('react-hot-toast').then(({ toast }) => {
+                          toast('Upgrade system is currently in preview. Integration with Stripe is coming soon!', { icon: '💳' })
+                        })
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+                        color: '#fff', border: 'none', borderRadius: '10px',
+                        padding: '10px 18px', fontSize: 13, fontWeight: 700,
+                        cursor: 'pointer', fontFamily: 'var(--font-body)',
+                        boxShadow: '0 4px 12px rgba(139,92,246,0.25)',
+                        alignSelf: 'flex-start'
+                      }}
+                    >
+                      Upgrade to {limitError.suggested_plan?.toUpperCase()} Plan
+                    </button>
+                  )}
                 </div>
               )}
 

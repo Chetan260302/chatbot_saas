@@ -11,11 +11,14 @@ import {
   Copy, Check, UploadCloud, Send, RefreshCw, Bot, BookOpen,
 } from 'lucide-react'
 
+import { usePermissions } from '../../hooks/usePermissions'
+
 type Tab = 'documents' | 'chat' | 'settings'
 
 export default function ChatbotDetailPage() {
   const { slug }   = useParams<{ slug: string }>()
   const navigate   = useNavigate()
+  const { canEditChatbots } = usePermissions()
   const [bot,      setBot]      = useState<Chatbot | null>(null)
   const [docs,     setDocs]     = useState<Document[]>([])
   const [tab,      setTab]      = useState<Tab>('documents')
@@ -219,13 +222,13 @@ export default function ChatbotDetailPage() {
         {/* Tab content */}
         <div style={{ marginTop: 8 }}>
           {tab === 'documents' && (
-            <DocumentsTab botId={bot.id} docs={docs} setDocs={setDocs} />
+            <DocumentsTab botId={bot.id} docs={docs} setDocs={setDocs} readOnly={!canEditChatbots} />
           )}
           {tab === 'chat' && (
             <ChatTab bot={bot} />
           )}
           {tab === 'settings' && (
-            <SettingsTab bot={bot} setBot={setBot} onDelete={() => navigate('/dashboard/chatbots')} />
+            <SettingsTab bot={bot} setBot={setBot} onDelete={() => navigate('/dashboard/chatbots')} readOnly={!canEditChatbots} />
           )}
         </div>
 
@@ -236,11 +239,12 @@ export default function ChatbotDetailPage() {
 
 // ── Documents Tab ──
 function DocumentsTab({
-  botId, docs, setDocs,
+  botId, docs, setDocs, readOnly = false,
 }: {
   botId:   string
   docs:    Document[]
   setDocs: React.Dispatch<React.SetStateAction<Document[]>>
+  readOnly?: boolean
 }) {
   const inputRef         = useRef<HTMLInputElement>(null)
   const [uploading,      setUploading]      = useState(false)
@@ -255,7 +259,9 @@ function DocumentsTab({
       setDocs(prev => [data, ...prev])
       toast.success('Document uploaded successfully!')
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Upload failed')
+      const detail = err.response?.data?.detail
+      const msg = detail && typeof detail === 'object' ? detail.message : (detail || 'Upload failed')
+      toast.error(msg)
     } finally {
       setUploading(false)
       setUploadProgress(0)
@@ -283,21 +289,22 @@ function DocumentsTab({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Drop zone */}
-      <div
-        onDrop={handleDrop}
-        onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onClick={() => !uploading && inputRef.current?.click()}
-        style={{
-          border: `2px dashed ${dragOver ? '#fb923c' : 'var(--dash-card-border)'}`,
-          borderRadius: 'var(--radius-lg)',
-          padding: '48px 24px',
-          textAlign: 'center',
-          cursor: uploading ? 'wait' : 'pointer',
-          background: dragOver ? 'rgba(234,88,12,0.06)' : 'var(--dash-card)',
-          transition: 'all 0.2s',
-        }}
-      >
+      {!readOnly && (
+        <div
+          onDrop={handleDrop}
+          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onClick={() => !uploading && inputRef.current?.click()}
+          style={{
+            border: `2px dashed ${dragOver ? '#fb923c' : 'var(--dash-card-border)'}`,
+            borderRadius: 'var(--radius-lg)',
+            padding: '48px 24px',
+            textAlign: 'center',
+            cursor: uploading ? 'wait' : 'pointer',
+            background: dragOver ? 'rgba(234,88,12,0.06)' : 'var(--dash-card)',
+            transition: 'all 0.2s',
+          }}
+        >
         <input
           ref={inputRef} type="file"
           accept=".pdf,.docx,.txt"
@@ -339,6 +346,7 @@ function DocumentsTab({
           </>
         )}
       </div>
+      )}
 
       {/* Document list */}
       {docs.length > 0 && (
@@ -390,19 +398,21 @@ function DocumentsTab({
               <StatusBadge status={doc.status} />
 
               {/* Delete */}
-              <button
-                onClick={() => handleDelete(doc.id)}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--color-subtle)', fontSize: 16,
-                  padding: '4px 8px', borderRadius: 6, transition: 'all 0.18s',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-subtle)')}
-              >
-                <Trash2 size={15} />
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={() => handleDelete(doc.id)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--color-subtle)', fontSize: 16,
+                    padding: '4px 8px', borderRadius: 6, transition: 'all 0.18s',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-subtle)')}
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
             </div>
           ))}
         </Card>
@@ -482,22 +492,35 @@ function ChatTab({ bot }: { bot: Chatbot }) {
     setThinking(true)
     setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
-    await chatApi.stream(
-      bot.id,
-      sessionId,
-      msg,
-      (token) => {
-        setMessages(prev => {
-          const updated = [...prev]
-          updated[updated.length - 1] = {
-            role:    'assistant',
-            content: updated[updated.length - 1].content + token,
-          }
-          return updated
-        })
-      },
-      () => setThinking(false)
-    )
+    try {
+      await chatApi.stream(
+        bot.id,
+        sessionId,
+        msg,
+        (token) => {
+          setMessages(prev => {
+            const updated = [...prev]
+            updated[updated.length - 1] = {
+              role:    'assistant',
+              content: updated[updated.length - 1].content + token,
+            }
+            return updated
+          })
+        },
+        () => setThinking(false)
+      )
+    } catch (err: any) {
+      setThinking(false)
+      // Pop the empty assistant message off the state
+      setMessages(prev => {
+        const updated = [...prev]
+        if (updated[updated.length - 1]?.role === 'assistant' && !updated[updated.length - 1]?.content) {
+          updated.pop()
+        }
+        return updated
+      })
+      toast.error(err.message || 'Failed to send message')
+    }
   }
 
   const handleClear = () => {
@@ -627,11 +650,12 @@ function ChatTab({ bot }: { bot: Chatbot }) {
 
 // ── Settings Tab ──
 function SettingsTab({
-  bot, setBot, onDelete,
+  bot, setBot, onDelete, readOnly = false,
 }: {
   bot:     Chatbot
   setBot:  (b: Chatbot) => void
   onDelete: () => void
+  readOnly?: boolean
 }) {
   const [form,   setForm]   = useState({
     name:          bot.name,
@@ -689,6 +713,7 @@ function SettingsTab({
       }}>{label}</label>
       {multiline ? (
         <textarea
+          disabled={readOnly}
           value={form[key]}
           onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
           rows={4}
@@ -704,6 +729,7 @@ function SettingsTab({
         />
       ) : (
         <input
+          disabled={readOnly}
           value={form[key]}
           onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
           style={{
@@ -747,6 +773,7 @@ function SettingsTab({
               color: 'var(--color-cream)', opacity: 0.8, fontFamily: 'var(--font-body)',
             }}>Domain</label>
             <select
+              disabled={readOnly}
               value={form.domain}
               onChange={e => setForm(f => ({ ...f, domain: e.target.value }))}
               style={{
@@ -754,7 +781,7 @@ function SettingsTab({
                 border: '1.5px solid var(--dash-input-border)', borderRadius: 10,
                 padding: '11px 14px', color: 'var(--color-cream)', fontSize: 14,
                 fontFamily: 'var(--font-body)', outline: 'none',
-                cursor: 'pointer',
+                cursor: readOnly ? 'not-allowed' : 'pointer',
                 transition: 'border-color 0.2s',
               }}
               onFocus={e => (e.target.style.borderColor = 'rgba(234,88,12,0.5)')}
@@ -770,17 +797,19 @@ function SettingsTab({
 
           {field('System prompt', 'system_prompt', true)}
 
-          <button onClick={save} disabled={saving} style={{
-            background: saving ? 'rgba(234,88,12,0.4)' : '#ea580c',
-            color: '#fff', border: 'none', borderRadius: 10,
-            padding: '12px 24px', fontSize: 14, fontWeight: 700,
-            cursor: saving ? 'wait' : 'pointer',
-            fontFamily: 'var(--font-body)',
-            boxShadow: '0 6px 20px rgba(234,88,12,0.3)',
-            alignSelf: 'flex-start',
-          }}>
-            {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save changes'}
-          </button>
+          {!readOnly && (
+            <button onClick={save} disabled={saving} style={{
+              background: saving ? 'rgba(234,88,12,0.4)' : '#ea580c',
+              color: '#fff', border: 'none', borderRadius: 10,
+              padding: '12px 24px', fontSize: 14, fontWeight: 700,
+              cursor: saving ? 'wait' : 'pointer',
+              fontFamily: 'var(--font-body)',
+              boxShadow: '0 6px 20px rgba(234,88,12,0.3)',
+              alignSelf: 'flex-start',
+            }}>
+              {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save changes'}
+            </button>
+          )}
         </Card>
       </div>
 
@@ -815,6 +844,7 @@ function SettingsTab({
             </div>
             <button
               onClick={async () => {
+                if (readOnly) return
                 try {
                   const { data } = await chatbotsApi.update(bot.id, { is_active: !bot.is_active })
                   setBot(data)
@@ -823,17 +853,19 @@ function SettingsTab({
                   toast.error('Failed to update bot status')
                 }
               }}
+              disabled={readOnly}
               style={{
                 position: 'relative',
                 width: 48, height: 26, borderRadius: 13,
-                border: 'none', cursor: 'pointer', flexShrink: 0,
+                border: 'none', cursor: readOnly ? 'not-allowed' : 'pointer', flexShrink: 0,
                 background: bot.is_active
                   ? 'linear-gradient(135deg, #22c55e, #4ade80)'
                   : 'rgba(255,255,255,0.12)',
                 transition: 'background 0.3s',
                 padding: 0,
+                opacity: readOnly ? 0.6 : 1,
               }}
-              title={bot.is_active ? 'Click to pause bot' : 'Click to activate bot'}
+              title={readOnly ? undefined : (bot.is_active ? 'Click to pause bot' : 'Click to activate bot')}
             >
               <div style={{
                 position: 'absolute',
@@ -848,43 +880,45 @@ function SettingsTab({
         </Card>
 
         {/* Danger Zone */}
-        <div style={{
-          background: 'rgba(239,68,68,0.05)',
-          border: '1px solid rgba(239,68,68,0.20)',
-          borderRadius: 'var(--radius-lg)', padding: '24px',
-        }}>
-          <h3 style={{
-            fontFamily: 'var(--font-display)', fontWeight: 800,
-            fontSize: 16, color: '#fca5a5', margin: '0 0 8px',
-          }}>Danger zone</h3>
-          <p style={{
-            color: 'rgba(252,165,165,0.55)', fontSize: 13,
-            fontFamily: 'var(--font-body)', margin: '0 0 16px',
-            lineHeight: 1.5,
+        {!readOnly && (
+          <div style={{
+            background: 'rgba(239,68,68,0.05)',
+            border: '1px solid rgba(239,68,68,0.20)',
+            borderRadius: 'var(--radius-lg)', padding: '24px',
           }}>
-            Deleting this chatbot will also delete all its documents and conversations. This action is permanent and cannot be undone.
-          </p>
-          <button onClick={handleDeleteTrigger} style={{
-            background: 'transparent', border: '1px solid rgba(239,68,68,0.35)',
-            borderRadius: 10, padding: '9px 18px',
-            color: '#f87171', fontSize: 13, fontWeight: 600,
-            cursor: 'pointer', fontFamily: 'var(--font-body)',
-            transition: 'all 0.2s',
-            width: '100%',
-            textAlign: 'center',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget.style.background    = 'rgba(239,68,68,0.10)')
-            ;(e.currentTarget.style.borderColor   = 'rgba(239,68,68,0.55)')
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget.style.background    = 'transparent')
-            ;(e.currentTarget.style.borderColor   = 'rgba(239,68,68,0.35)')
-          }}
-          >
-            Delete chatbot
-          </button>
-        </div>
+            <h3 style={{
+              fontFamily: 'var(--font-display)', fontWeight: 800,
+              fontSize: 16, color: '#fca5a5', margin: '0 0 8px',
+            }}>Danger zone</h3>
+            <p style={{
+              color: 'rgba(252,165,165,0.55)', fontSize: 13,
+              fontFamily: 'var(--font-body)', margin: '0 0 16px',
+              lineHeight: 1.5,
+            }}>
+              Deleting this chatbot will also delete all its documents and conversations. This action is permanent and cannot be undone.
+            </p>
+            <button onClick={handleDeleteTrigger} style={{
+              background: 'transparent', border: '1px solid rgba(239,68,68,0.35)',
+              borderRadius: 10, padding: '9px 18px',
+              color: '#f87171', fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'var(--font-body)',
+              transition: 'all 0.2s',
+              width: '100%',
+              textAlign: 'center',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget.style.background    = 'rgba(239,68,68,0.10)')
+              ;(e.currentTarget.style.borderColor   = 'rgba(239,68,68,0.55)')
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget.style.background    = 'transparent')
+              ;(e.currentTarget.style.borderColor   = 'rgba(239,68,68,0.35)')
+            }}
+            >
+              Delete chatbot
+            </button>
+          </div>
+        )}
       </div>
 
       <AlertDialog

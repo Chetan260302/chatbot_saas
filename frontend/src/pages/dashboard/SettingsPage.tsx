@@ -8,14 +8,17 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { toast } from 'react-hot-toast'
-import { User, Bell, Shield, Sun, Moon, Key, Copy, Check, Eye, EyeOff, Lock } from 'lucide-react'
+import { User, Bell, Shield, Sun, Moon, Key, Copy, Check, Eye, EyeOff, Lock, Zap } from 'lucide-react'
+import { usePermissions } from '../../hooks/usePermissions'
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useThemeStore()
   const { user } = useAuthStore()
+  const { canViewApiKey, canViewBilling } = usePermissions()
   const dark = theme === 'dark'
 
   const [tenant, setTenant] = useState<{ id: string; name: string; api_key: string; plan: string } | null>(null)
+  const [usage, setUsage] = useState<any | null>(null)
   const [showKey, setShowKey] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -24,9 +27,10 @@ export default function SettingsPage() {
   const [pwdLoading, setPwdLoading] = useState(false)
 
   useEffect(() => {
-    authAPI.getTenantMe()
-      .then(res => setTenant(res))
-      .catch(err => console.error("Failed to load tenant details:", err))
+    Promise.all([
+      authAPI.getTenantMe().then(res => setTenant(res)),
+      authAPI.getTenantUsage().then(res => setUsage(res)),
+    ]).catch(err => console.error("Failed to load settings data:", err))
   }, [])
 
   const copyKey = () => {
@@ -132,68 +136,70 @@ export default function SettingsPage() {
             </Card>
 
             {/* API Credentials Section */}
-            <Card style={{
-              display: 'flex', flexDirection: 'column', gap: 18,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Key size={18} color="#fb923c" strokeWidth={2} />
-                <h2 style={{
-                  margin: 0, fontSize: 16, fontWeight: 700,
-                  color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
-                }}>API Keys</h2>
-              </div>
+            {canViewApiKey && (
+              <Card style={{
+                display: 'flex', flexDirection: 'column', gap: 18,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Key size={18} color="#fb923c" strokeWidth={2} />
+                  <h2 style={{
+                    margin: 0, fontSize: 16, fontWeight: 700,
+                    color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
+                  }}>API Keys</h2>
+                </div>
 
-              <div>
-                <p style={{
-                  margin: 0, fontSize: 14, color: 'var(--color-cream)', fontWeight: 600,
-                  fontFamily: 'var(--font-body)',
-                }}>Public API Key</p>
-                <p style={{
-                  margin: '2px 0 12px', fontSize: 13, color: 'var(--color-muted)',
-                  fontFamily: 'var(--font-body)',
-                }}>
-                  Authenticate your embed widget. Keep this key secret.
-                </p>
-
-                {tenant ? (
-                  <div style={{
-                    display: 'flex', gap: 8, alignItems: 'center',
-                    background: 'var(--dash-input-bg)', border: '1px solid var(--dash-input-border)',
-                    borderRadius: 10, padding: '10px 14px',
+                <div>
+                  <p style={{
+                    margin: 0, fontSize: 14, color: 'var(--color-cream)', fontWeight: 600,
+                    fontFamily: 'var(--font-body)',
+                  }}>Public API Key</p>
+                  <p style={{
+                    margin: '2px 0 12px', fontSize: 13, color: 'var(--color-muted)',
+                    fontFamily: 'var(--font-body)',
                   }}>
-                    <code style={{
-                      flex: 1, color: '#fb923c', fontSize: 13, fontFamily: 'monospace',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    Authenticate your embed widget. Keep this key secret.
+                  </p>
+
+                  {tenant ? (
+                    <div style={{
+                      display: 'flex', gap: 8, alignItems: 'center',
+                      background: 'var(--dash-input-bg)', border: '1px solid var(--dash-input-border)',
+                      borderRadius: 10, padding: '10px 14px',
                     }}>
-                      {showKey ? tenant.api_key : '•'.repeat(40)}
-                    </code>
-                    <button
-                      onClick={() => setShowKey(!showKey)}
-                      title={showKey ? "Hide API key" : "Show API key"}
-                      style={{
-                        background: 'none', border: 'none', color: 'var(--color-muted)', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4,
-                      }}
-                    >
-                      {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                    <div style={{ width: 1, height: 16, background: 'var(--dash-card-border)' }} />
-                    <button
-                      onClick={copyKey}
-                      title="Copy API key"
-                      style={{
-                        background: 'none', border: 'none', color: copied ? '#4ade80' : 'var(--color-muted)', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4,
-                      }}
-                    >
-                      {copied ? <Check size={16} /> : <Copy size={16} />}
-                    </button>
-                  </div>
-                ) : (
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--color-muted)' }}>Loading credentials...</p>
-                )}
-              </div>
-            </Card>
+                      <code style={{
+                        flex: 1, color: '#fb923c', fontSize: 13, fontFamily: 'monospace',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {showKey ? tenant.api_key : '•'.repeat(40)}
+                      </code>
+                      <button
+                        onClick={() => setShowKey(!showKey)}
+                        title={showKey ? "Hide API key" : "Show API key"}
+                        style={{
+                          background: 'none', border: 'none', color: 'var(--color-muted)', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4,
+                        }}
+                      >
+                        {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                      <div style={{ width: 1, height: 16, background: 'var(--dash-card-border)' }} />
+                      <button
+                        onClick={copyKey}
+                        title="Copy API key"
+                        style={{
+                          background: 'none', border: 'none', color: copied ? '#4ade80' : 'var(--color-muted)', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4,
+                        }}
+                      >
+                        {copied ? <Check size={16} /> : <Copy size={16} />}
+                      </button>
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--color-muted)' }}>Loading credentials...</p>
+                  )}
+                </div>
+              </Card>
+            )}
 
             {/* Change Password Section */}
             <Card style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -271,6 +277,93 @@ export default function SettingsPage() {
           {/* Right Column: Appearance, Coming soon sections */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
             
+            {/* Plan & Billing Section */}
+            {canViewBilling && usage && (
+              <Card style={{
+                display: 'flex', flexDirection: 'column', gap: 18,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Zap size={18} color="#fb923c" strokeWidth={2} />
+                  <h2 style={{
+                    margin: 0, fontSize: 16, fontWeight: 700,
+                    color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
+                  }}>Plan & Billing</h2>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <p style={{
+                      margin: 0, fontSize: 14, color: 'var(--color-cream)', fontWeight: 600,
+                      fontFamily: 'var(--font-body)',
+                    }}>Current Plan</p>
+                    <p style={{
+                      margin: '2px 0 0', fontSize: 13, color: 'var(--color-muted)',
+                      fontFamily: 'var(--font-body)',
+                    }}>
+                      You are currently on the <strong style={{ color: '#fb923c', textTransform: 'capitalize' }}>{usage.plan}</strong> plan
+                    </p>
+                  </div>
+                  <Badge variant={usage.plan === 'free' ? 'warning' : 'default'} style={{ textTransform: 'uppercase' }}>
+                    {usage.plan}
+                  </Badge>
+                </div>
+
+                {usage.plan === 'free' && usage.trial_days_remaining !== null && (
+                  <div style={{
+                    background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)',
+                    borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#fbbf24',
+                    fontFamily: 'var(--font-body)',
+                  }}>
+                    Your trial ends on <strong>{usage.trial_ends_at ? new Date(usage.trial_ends_at).toLocaleDateString() : '—'}</strong> ({usage.trial_days_remaining} days left).
+                  </div>
+                )}
+
+                <div style={{ height: 1, background: 'var(--dash-card-border)' }} />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <h3 style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: 'var(--color-muted)' }}>Usage limits</h3>
+                  
+                  <ProgressBar
+                    label="Chatbots"
+                    current={usage.usage.chatbots}
+                    limit={usage.limits.chatbots}
+                  />
+
+                  <ProgressBar
+                    label="Conversations (per month)"
+                    current={usage.usage.conversations}
+                    limit={usage.limits.conversations}
+                  />
+
+                  <ProgressBar
+                    label="Messages (per month)"
+                    current={usage.usage.messages}
+                    limit={usage.limits.messages}
+                  />
+                </div>
+
+                <button
+                  onClick={() => toast('Upgrade system is currently in preview. Integration with Stripe is coming soon!', { icon: '💳' })}
+                  style={{
+                    background: 'linear-gradient(135deg, #ea580c 0%, #fb923c 100%)',
+                    border: 'none',
+                    borderRadius: 10,
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    padding: '10px 20px',
+                    alignSelf: 'flex-start',
+                    marginTop: 6,
+                    boxShadow: '0 4px 14px rgba(234, 88, 12, 0.25)',
+                  }}
+                >
+                  Upgrade Plan
+                </button>
+              </Card>
+            )}
+            
             {/* Appearance section */}
             <Card style={{
               display: 'flex', flexDirection: 'column', gap: 18,
@@ -338,5 +431,31 @@ export default function SettingsPage() {
         </div>
       </div>
     </DashboardLayout>
+  )
+}
+
+function ProgressBar({ label, current, limit }: { label: string, current: number, limit: number }) {
+  const percent = limit > 0 ? Math.min(100, (current / limit) * 100) : 0
+  const isHigh = percent >= 80
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontFamily: 'var(--font-body)' }}>
+        <span style={{ color: 'var(--color-muted)' }}>{label}</span>
+        <span style={{ color: 'var(--color-cream)', fontWeight: 600 }}>
+          {current} / {limit >= 999999 ? '∞' : limit}
+        </span>
+      </div>
+      <div style={{ height: 6, background: 'var(--dash-card-border)', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${percent}%`,
+          background: isHigh
+            ? 'linear-gradient(90deg, #ef4444, #f87171)'
+            : 'linear-gradient(90deg, #ea580c, #fb923c)',
+          borderRadius: 3,
+          transition: 'width 0.4s ease-out'
+        }} />
+      </div>
+    </div>
   )
 }

@@ -30,6 +30,14 @@ async def public_chat_stream(
     This is the ONLY endpoint your embedded widget calls.
     Identified by API key, not user login.
     """
+    from app.services.usage_service import check_can_send_message
+    usage_check = await check_can_send_message(tenant, db)
+    if not usage_check["allowed"]:
+        raise HTTPException(
+            status_code=403,
+            detail="This assistant is temporarily unavailable. Please contact the business directly."
+        )
+
     result = await db.execute(
         select(Chatbot).where(
             Chatbot.id        == data.chatbot_id,

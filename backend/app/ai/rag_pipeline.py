@@ -11,6 +11,7 @@ from typing import AsyncGenerator
 import json
 from langchain_groq import ChatGroq
 from app.ai.domain_concepts import get_domain_hints, get_domain_examples, DOMAIN_CONCEPTS
+from app.db.session import AsyncSessionLocal
 
 
 # The LLM — runs locally via Ollama
@@ -496,7 +497,9 @@ async def stream_chat_response(
     bot_name: str = "this service",   # ← add
 ) -> AsyncGenerator[str, None]:
 
-    chunks   = await retrieve_relevant_chunks(question, chatbot_id, tenant_id, db, domain=domain)
+    async with AsyncSessionLocal() as local_db:
+        chunks   = await retrieve_relevant_chunks(question, chatbot_id, tenant_id, local_db, domain=domain)
+    
     messages = build_prompt(system_prompt, chunks, question, bot_name=bot_name)  # ← pass
 
     async for chunk in llm.astream(messages):

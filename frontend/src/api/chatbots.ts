@@ -105,6 +105,11 @@ export const chatApi={
             }),
             
         })
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}))
+            const msg = body.detail?.message || body.detail || "Request failed"
+            throw new Error(msg)
+        }
         const reader =res.body?.getReader()
         const decoder = new TextDecoder()
         if (!reader) return

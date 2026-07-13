@@ -13,6 +13,7 @@ import {
   Bot, FileText, MessageSquare, Edit2,
   Building2, ChevronDown, ToggleLeft, ToggleRight
 } from 'lucide-react'
+import { usePermissions } from '../../hooks/usePermissions'
 import toast from 'react-hot-toast'
 
 interface BotExtendedInfo {
@@ -24,6 +25,7 @@ export default function ChatbotsListPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user } = useAuthStore()
+  const { canEditChatbots } = usePermissions()
   const isSuperadmin = user?.is_superadmin ?? false
 
   const [chatbots, setChatbots] = useState<Chatbot[]>([])
@@ -156,7 +158,7 @@ export default function ChatbotsListPage() {
         <PageHeader
           title={isSuperadmin ? "Platform Chatbots" : "Chatbots"}
           subtitle={isSuperadmin ? "View and manage chatbots across all register tenants." : "Configure, train, and test your AI agents."}
-          action={(
+          action={canEditChatbots && (
             <button
               onClick={() => navigate('/dashboard/chatbots/new')}
               style={{
@@ -330,8 +332,8 @@ export default function ChatbotsListPage() {
           }}>
             {/* RENDER SUPERADMIN CHATBOTS (Clickable if own tenant, oversight mode if other tenant) */}
             {isSuperadmin && adminChatbots.map((bot) => {
-              const isOwnBot = bot.tenant_id && user?.tenant_id && 
-                bot.tenant_id.toLowerCase().replace(/[^a-z0-9]/g, '') === user.tenant_id.toLowerCase().replace(/[^a-z0-9]/g, '')
+              const isOwnBot = !!(bot.tenant_id && user?.tenant_id && 
+                bot.tenant_id.toLowerCase().replace(/[^a-z0-9]/g, '') === user.tenant_id.toLowerCase().replace(/[^a-z0-9]/g, ''))
               
               return (
                 <Card
@@ -565,7 +567,7 @@ export default function ChatbotsListPage() {
                       alignItems: 'center',
                       gap: '4px',
                     }}>
-                      Edit <Edit2 size={13} />
+                      {canEditChatbots ? 'Edit' : 'View'} <Edit2 size={13} />
                     </span>
                   </div>
                 </Card>

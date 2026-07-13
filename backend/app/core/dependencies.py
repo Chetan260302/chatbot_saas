@@ -65,10 +65,16 @@ def require_role(*roles: str):
     """
     Role-based access control — use like:
     @router.delete(..., dependencies=[Depends(require_role("owner", "admin"))])
+    Superadmins automatically pass all role checks.
     """
     async def role_checker(current_user: User = Depends(get_current_user)):
+        if current_user.is_superadmin:
+            return current_user  # superadmins bypass role checks
         if current_user.role not in roles:
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
+            raise HTTPException(
+                status_code=403,
+                detail=f"This action requires one of these roles: {', '.join(roles)}. Your role: {current_user.role}"
+            )
         return current_user
     return role_checker
 
