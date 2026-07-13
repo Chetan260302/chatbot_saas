@@ -15,9 +15,15 @@ from app.core.config import settings
 # )
 
 
-from sentence_transformers import SentenceTransformer
+_embeddings_model = None
 BGE_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
-embeddings_model=SentenceTransformer("BAAI/bge-base-en")
+
+def get_embeddings_model():
+    global _embeddings_model
+    if _embeddings_model is None:
+        from sentence_transformers import SentenceTransformer
+        _embeddings_model = SentenceTransformer("BAAI/bge-base-en")
+    return _embeddings_model
 
 import numpy as np
 
@@ -45,13 +51,15 @@ async def embed_text(text: str, is_query: bool = True) -> list[float]:
     """
     if is_query:
         text = BGE_QUERY_PREFIX + text
-    raw = embeddings_model.encode(text, normalize_embeddings=True).tolist()
+    model = get_embeddings_model()
+    raw = model.encode(text, normalize_embeddings=True).tolist()
     return raw
 
 
 async def embed_texts(texts: list[str], is_query: bool = False) -> list[list[float]]:
     """For document chunks — no prefix."""
-    raw = embeddings_model.encode(texts, normalize_embeddings=True).tolist()
+    model = get_embeddings_model()
+    raw = model.encode(texts, normalize_embeddings=True).tolist()
     return raw
 
 
