@@ -46,9 +46,9 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # ── AI ────────────────────────────────────────────
-    OLLAMA_BASE_URL: str
-    LLM_MODEL: str
-    EMBEDDING_MODEL: str
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    LLM_MODEL: str = "llama3.2"
+    EMBEDDING_MODEL: str = "nomic-embed-text"
     OPENAI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
     GROQ_API_KEY: str
