@@ -1,8 +1,6 @@
 # backend/app/core/config.py
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
 from functools import lru_cache
-from typing import Union
 from pathlib import Path
 
 # Always points to chatbot-saas/.env, no matter where you run uvicorn from
@@ -15,27 +13,22 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
     API_V1_PREFIX: str = "/api/v1"
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:5173"]  # frontend dev servers
+    ALLOWED_ORIGINS: str = "http://localhost:5173"  # comma-separated origins
 
-    @field_validator("ALLOWED_ORIGINS", mode="before")
-    @classmethod
-    def assemble_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
-        if isinstance(v, list):
-            return v
-        if isinstance(v, str):
-            v = v.strip()
-            # JSON array string like '["http://localhost:5173"]'
-            if v.startswith("["):
-                import json
-                try:
-                    parsed = json.loads(v)
-                    if isinstance(parsed, list):
-                        return [str(i).strip() for i in parsed]
-                except json.JSONDecodeError:
-                    pass
-            # Comma-separated string like "http://localhost:5173,https://example.com"
-            return [i.strip() for i in v.split(",") if i.strip()]
-        raise ValueError(v)
+    @property
+    def cors_origins(self) -> list[str]:
+        """Parse ALLOWED_ORIGINS string into a list. Supports both
+        comma-separated ('http://a.com,http://b.com') and JSON array formats."""
+        v = self.ALLOWED_ORIGINS.strip()
+        if v.startswith("["):
+            import json
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return [str(i).strip() for i in parsed]
+            except json.JSONDecodeError:
+                pass
+        return [i.strip() for i in v.split(",") if i.strip()]
 
     # ── Database ──────────────────────────────────────
     DATABASE_URL: str
