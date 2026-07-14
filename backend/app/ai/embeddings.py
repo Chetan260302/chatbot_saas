@@ -97,13 +97,23 @@ async def embed_text(text: str, is_query: bool = True) -> list[float]:
     return _pool_and_normalize(vectors[0])
 
 
-async def embed_texts(texts: list[str], is_query: bool = False) -> list[list[float]]:
+async def embed_texts(texts: list[str], is_query: bool = False, batch_size: int = 32) -> list[list[float]]:
     """
-    Embed multiple texts in one batch via HF Inference API.
-    For document chunks — no prefix by default.
+    Embed multiple texts in batches via HF Inference API.
+    Splits the texts into small batches to prevent high memory spikes
+    and HF API payload limit issues.
     """
+    if not texts:
+        return []
+
     if is_query:
         texts = [BGE_QUERY_PREFIX + t for t in texts]
 
-    vectors = await _call_hf_api(texts)
-    return [_pool_and_normalize(v) for v in vectors]
+    all_vectors = []
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i : i + batch_size]
+        vectors = await _call_hf_api(batch)
+        for v in vectors:
+            all_vectors.append(_pool_and_normalize(v))
+            
+    return all_vectors

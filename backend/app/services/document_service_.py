@@ -425,8 +425,12 @@ async def upload_document(
     file_id   = str(uuid.uuid4())
     save_path = UPLOAD_DIR / f"{file_id}_{file.filename}"
 
+    content = await file.read()
+    max_bytes = 5 * 1024 * 1024 # 5MB limit
+    if len(content) > max_bytes:
+        raise HTTPException(status_code=400, detail="File size exceeds the 5MB limit.")
+
     async with aiofiles.open(save_path, "wb") as f:
-        content = await file.read()
         await f.write(content)
 
     document = Document(
