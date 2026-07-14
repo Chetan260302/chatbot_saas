@@ -250,6 +250,15 @@ function DocumentsTab({
   const [uploading,      setUploading]      = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [dragOver,       setDragOver]       = useState(false)
+  const [selectedFile,   setSelectedFile]   = useState<File | null>(null)
+
+  const handleFileSelect = (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size exceeds the 5MB limit.')
+      return
+    }
+    setSelectedFile(file)
+  }
 
   const upload = async (file: File) => {
     setUploading(true)
@@ -258,6 +267,7 @@ function DocumentsTab({
       const { data } = await documentsApi.upload(botId, file, setUploadProgress)
       setDocs(prev => [data, ...prev])
       toast.success('Document uploaded successfully!')
+      setSelectedFile(null)
     } catch (err: any) {
       const detail = err.response?.data?.detail
       const msg = detail && typeof detail === 'object' ? detail.message : (detail || 'Upload failed')
@@ -272,7 +282,7 @@ function DocumentsTab({
     e.preventDefault()
     setDragOver(false)
     const file = e.dataTransfer.files[0]
-    if (file) upload(file)
+    if (file) handleFileSelect(file)
   }
 
   const handleDelete = async (docId: string) => {
@@ -288,64 +298,133 @@ function DocumentsTab({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Drop zone */}
+      {/* Drop zone / File Preview / Uploading */}
       {!readOnly && (
-        <div
-          onDrop={handleDrop}
-          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-          onDragLeave={() => setDragOver(false)}
-          onClick={() => !uploading && inputRef.current?.click()}
-          style={{
-            border: `2px dashed ${dragOver ? '#fb923c' : 'var(--dash-card-border)'}`,
-            borderRadius: 'var(--radius-lg)',
-            padding: '48px 24px',
-            textAlign: 'center',
-            cursor: uploading ? 'wait' : 'pointer',
-            background: dragOver ? 'rgba(234,88,12,0.06)' : 'var(--dash-card)',
-            transition: 'all 0.2s',
-          }}
-        >
-        <input
-          ref={inputRef} type="file"
-          accept=".pdf,.docx,.txt"
-          style={{ display: 'none' }}
-          onChange={e => { if (e.target.files?.[0]) upload(e.target.files[0]) }}
-        />
-
-        {uploading ? (
-          <div>
-            <p style={{ color: '#fb923c', fontFamily: 'var(--font-body)', fontSize: 14, margin: '0 0 12px' }}>
-              Uploading & processing…
-            </p>
-            <div style={{
-              height: 4, background: 'var(--dash-card-border)', borderRadius: 2,
-              maxWidth: 280, margin: '0 auto',
-            }}>
+        <>
+          {uploading ? (
+            <div
+              style={{
+                border: '1px solid var(--dash-card-border)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '48px 24px',
+                textAlign: 'center',
+                background: 'var(--dash-card)',
+              }}
+            >
+              <p style={{ color: '#fb923c', fontFamily: 'var(--font-body)', fontSize: 14, margin: '0 0 12px' }}>
+                Uploading & processing…
+              </p>
               <div style={{
-                height: '100%', borderRadius: 2,
-                width: `${uploadProgress}%`, background: '#ea580c',
-                transition: 'width 0.3s ease',
-              }} />
+                height: 4, background: 'var(--dash-card-border)', borderRadius: 2,
+                maxWidth: 280, margin: '0 auto',
+              }}>
+                <div style={{
+                  height: '100%', borderRadius: 2,
+                  width: `${uploadProgress}%`, background: '#ea580c',
+                  transition: 'width 0.3s ease',
+                }} />
+              </div>
+              <p style={{ color: 'var(--color-muted)', fontSize: 12, fontFamily: 'var(--font-body)', margin: '8px 0 0' }}>
+                {uploadProgress}%
+              </p>
             </div>
-            <p style={{ color: 'var(--color-muted)', fontSize: 12, fontFamily: 'var(--font-body)', margin: '8px 0 0' }}>
-              {uploadProgress}%
-            </p>
-          </div>
-        ) : (
-          <>
-            <UploadCloud size={36} color="#fb923c" style={{ marginBottom: 12 }} />
-            <p style={{
-              color: 'var(--color-cream)', fontSize: 15, fontWeight: 600,
-              fontFamily: 'var(--font-body)', margin: '0 0 6px',
-            }}>
-              Drop a file or click to upload
-            </p>
-            <p style={{ color: 'var(--color-muted)', fontSize: 13, fontFamily: 'var(--font-body)', margin: 0 }}>
-              PDF, DOCX, TXT · Max 50MB
-            </p>
-          </>
-        )}
-      </div>
+          ) : selectedFile ? (
+            <div
+              style={{
+                border: '1px solid var(--dash-card-border)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '32px 24px',
+                textAlign: 'center',
+                background: 'var(--dash-card)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 16,
+              }}
+            >
+              <div style={{
+                width: 54, height: 54, borderRadius: '50%',
+                background: 'rgba(234, 88, 12, 0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <FileText size={28} color="#fb923c" />
+              </div>
+              <div>
+                <h4 style={{
+                  color: 'var(--color-cream)', fontSize: 15, fontWeight: 600,
+                  margin: '0 0 4px', wordBreak: 'break-all', fontFamily: 'var(--font-body)'
+                }}>
+                  {selectedFile.name}
+                </h4>
+                <p style={{ color: 'var(--color-muted)', fontSize: 12, margin: 0, fontFamily: 'var(--font-body)' }}>
+                  {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+                <button
+                  onClick={() => upload(selectedFile)}
+                  style={{
+                    background: '#ea580c', color: 'white', border: 'none',
+                    borderRadius: 'var(--radius-sm)', padding: '8px 16px',
+                    fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f97316')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ea580c')}
+                >
+                  Process Document
+                </button>
+                <button
+                  onClick={() => setSelectedFile(null)}
+                  style={{
+                    background: 'transparent', color: 'var(--color-muted)',
+                    border: '1px solid var(--dash-card-border)',
+                    borderRadius: 'var(--radius-sm)', padding: '8px 16px',
+                    fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-cream)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-muted)')}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              onDrop={handleDrop}
+              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onClick={() => inputRef.current?.click()}
+              style={{
+                border: `2px dashed ${dragOver ? '#fb923c' : 'var(--dash-card-border)'}`,
+                borderRadius: 'var(--radius-lg)',
+                padding: '48px 24px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: dragOver ? 'rgba(234,88,12,0.06)' : 'var(--dash-card)',
+                transition: 'all 0.2s',
+              }}
+            >
+              <input
+                ref={inputRef} type="file"
+                accept=".pdf,.docx,.txt"
+                style={{ display: 'none' }}
+                onChange={e => { if (e.target.files?.[0]) handleFileSelect(e.target.files[0]) }}
+              />
+              <UploadCloud size={36} color="#fb923c" style={{ marginBottom: 12 }} />
+              <p style={{
+                color: 'var(--color-cream)', fontSize: 15, fontWeight: 600,
+                fontFamily: 'var(--font-body)', margin: '0 0 6px',
+              }}>
+                Drop a file or click to upload
+              </p>
+              <p style={{ color: 'var(--color-muted)', fontSize: 13, fontFamily: 'var(--font-body)', margin: 0 }}>
+                PDF, DOCX, TXT · Max 5MB
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       {/* Document list */}
