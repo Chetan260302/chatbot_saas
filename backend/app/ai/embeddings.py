@@ -32,7 +32,7 @@ async def _call_hf_api(texts: list[str]) -> list[list[float]]:
         "options": {"wait_for_model": True},
     }
 
-    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT, trust_env=False) as client:
         resp = await client.post(HF_API_URL, json=payload, headers=_headers())
 
     if resp.status_code != 200:
