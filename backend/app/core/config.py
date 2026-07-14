@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
     API_V1_PREFIX: str = "/api/v1"
-    ALLOWED_ORIGINS: str = "http://localhost:5173,https://botifyapp.vercel.app/"  # comma-separated origins
+    ALLOWED_ORIGINS: str = "http://localhost:5173,https://botifyapp.vercel.app"  # comma-separated origins
     FRONTEND_URL: str = "http://localhost:5173"
 
     @property
