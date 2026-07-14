@@ -79,6 +79,7 @@ async def register_tenant(data: TenantRegisterRequest, db: AsyncSession) -> Regi
     return RegisterResponse(
         status="ok",
         message="Registration successful. Please verify your email address to log in.",
+        verification_required=not user.is_verified,
         dev_verification_url=verification_url
     )
 

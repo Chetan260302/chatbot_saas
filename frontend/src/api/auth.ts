@@ -49,6 +49,7 @@ export interface UserProfile {
 export interface RegisterResponse {
   status: string
   message: string
+  verification_required?: boolean
   dev_verification_url?: string
 }
 

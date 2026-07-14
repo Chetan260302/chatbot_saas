@@ -7,6 +7,7 @@ import re
 class RegisterResponse(BaseModel):
     status: str
     message: str
+    verification_required: bool = False
     dev_verification_url: Optional[str] = None
 
 

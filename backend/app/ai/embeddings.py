@@ -28,8 +28,14 @@ async def _call_hf_api(texts: list[str]) -> list[list[float]]:
     Call HF Serverless Inference API to embed a batch of texts.
     Returns a list of 768-dim float vectors, one per input text.
     """
+    # Safe client-side truncation to prevent exceeding 512 token model limit
+    safe_texts = [t[:2000] for t in texts]
+
     payload = {
-        "inputs": texts,
+        "inputs": safe_texts,
+        "parameters": {
+            "truncate": True
+        },
         "options": {"wait_for_model": True},
     }
 

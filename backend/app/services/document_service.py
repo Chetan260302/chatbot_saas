@@ -485,7 +485,7 @@ def llm_guided_chunk(
 #     This is what runs on every document upload.
 #     """
 #     doc_type = detect_document_type(text)
-#     print(f"  📄 Document type detected: {doc_type}")
+#     print(f"Document type detected: {doc_type}")
 
 #     if doc_type == "structured":
 #         # Semantic sections → then parent-child for precise retrieval
@@ -506,7 +506,7 @@ def llm_guided_chunk(
 #         if len(c["text"].split()) >= 10
 #     ]
 
-#     print(f"  ✂️  Created {len(chunks)} chunks using {doc_type} strategy")
+#     print(f"Created {len(chunks)} chunks using {doc_type} strategy")
 #     return chunks
 async def smart_chunk(text: str) -> list[dict]:
     doc_type = detect_document_type(text)
@@ -528,7 +528,7 @@ async def smart_chunk(text: str) -> list[dict]:
 
     if needs_llm:
         # Only now use LLM — something went wrong with regex
-        print(f"  ⚠️  Regex chunking poor quality "
+        print(f" Regex chunking poor quality "
               f"({len(chunks)} chunks, avg {avg_chunk_words:.0f} words) "
               f"→ falling back to LLM detection")
         heading_lines = await detect_headings_with_llm(text)
@@ -536,7 +536,7 @@ async def smart_chunk(text: str) -> list[dict]:
             chunks = llm_guided_chunk(text, heading_lines, max_chunk_size=800)
 
     chunks = [c for c in chunks if len(c["text"].split()) >= 10]
-    print(f"  ✂️  {len(chunks)} chunks, avg {avg_chunk_words:.0f} words/chunk")
+    print(f" {len(chunks)} chunks, avg {avg_chunk_words:.0f} words/chunk")
     return chunks
 
 def normalize_embedding(embedding: list[float]) -> list[float]:
@@ -624,12 +624,12 @@ async def upload_document(
 
         document.status      = DocumentStatus.READY
         document.chunk_count = len(chunks)
-        print(f"  ✅ Document processed: {len(chunks)} chunks stored")
+        print(f" Document processed: {len(chunks)} chunks stored")
 
     except Exception as e:
         document.status    = DocumentStatus.FAILED
         document.error_msg = str(e)
-        print(f"  ❌ Document processing failed: {e}")
+        print(f" Document processing failed: {e}")
 
     await db.commit()
     await db.refresh(document)

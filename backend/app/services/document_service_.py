@@ -173,6 +173,50 @@ def level3_structure_chunk(text: str, max_chunk_size: int = 800) -> list[dict]:
 # Embeds every sentence, splits where meaning shifts sharply
 # ─────────────────────────────────────────────────────────────
 
+async def split_long_sentence(sentence: str, max_chars: int = 1500) -> list[str]:
+    """Splits an exceptionally long sentence into smaller sub-sentences/chunks."""
+    if len(sentence) <= max_chars:
+        return [sentence]
+        
+    # Attempt to split on common sub-sentence delimiters first (semicolons, commas, newlines)
+    parts = re.split(r"(?<=[\n;,])\s+", sentence)
+    sub_sentences = []
+    current = []
+    
+    for part in parts:
+        part_len = len(part)
+        if part_len > max_chars:
+            # If a single part is still too long, split it by words
+            words = part.split()
+            word_chunk = []
+            word_len = 0
+            for w in words:
+                if word_len + len(w) + 1 > max_chars:
+                    if word_chunk:
+                        sub_sentences.append(" ".join(word_chunk))
+                    word_chunk = [w]
+                    word_len = len(w)
+                else:
+                    word_chunk.append(w)
+                    word_len += len(w) + 1
+            if word_chunk:
+                sub_sentences.append(" ".join(word_chunk))
+        else:
+            # Aggregate parts
+            current_len = sum(len(p) + 1 for p in current)
+            if current_len + part_len > max_chars:
+                if current:
+                    sub_sentences.append(" ".join(current))
+                current = [part]
+            else:
+                current.append(part)
+                
+    if current:
+        sub_sentences.append(" ".join(current))
+        
+    return [s.strip() for s in sub_sentences if s.strip()]
+
+
 async def level4_semantic_chunk(
     text: str,
     breakpoint_threshold: float = 0.35,
@@ -188,10 +232,16 @@ async def level4_semantic_chunk(
     sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z])", text.strip())
     sentences = [s.strip() for s in sentences if len(s.strip().split()) > 5]
 
+    # Pre-process: split any exceptionally long sentences into safe sub-chunks
+    safe_sentences = []
+    for s in sentences:
+        safe_sentences.extend(await split_long_sentence(s))
+    sentences = safe_sentences
+
     if len(sentences) < 4:
         return level2_recursive_chunk(text)
 
-    print(f"  🧠 Semantic chunking: embedding {len(sentences)} sentences...")
+    print(f" Semantic chunking: embedding {len(sentences)} sentences...")
 
     # Embed all sentences at once (one batch call — efficient)
     embeddings = await embed_texts(sentences, is_query=False)
@@ -218,7 +268,7 @@ async def level4_semantic_chunk(
         if sim < threshold
     ]
 
-    print(f"  📍 Found {len(breakpoints)} semantic breakpoints "
+    print(f" Found {len(breakpoints)} semantic breakpoints "
           f"(threshold={threshold:.3f})")
 
     # Build chunks from breakpoints
@@ -248,7 +298,7 @@ async def level4_semantic_chunk(
 
     # If semantic chunking produced too few or too many — fallback
     if len(chunks) < 2 or len(chunks) > 100:
-        print(f"  ↩️  Semantic chunking result poor ({len(chunks)} chunks) → using recursive")
+        print(f" Semantic chunking result poor ({len(chunks)} chunks) → using recursive")
         return level2_recursive_chunk(text)
 
     return chunks
@@ -299,18 +349,18 @@ async def smart_chunk(text: str) -> list[dict]:
     Mixed          → Level 3 → quality check → Level 4 if poor
     """
     doc_type = detect_document_type(text)
-    print(f"  📄 Document type: {doc_type}")
+    print(f" Document type: {doc_type}")
 
     if doc_type == "structured":
         # Level 3 primary
         chunks = level3_structure_chunk(text)
 
         if not _chunk_quality_ok(chunks):
-            print(f"  ⚠️  Level 3 quality poor → trying Level 4 semantic")
+            print(f"Level 3 quality poor → trying Level 4 semantic")
             chunks = await level4_semantic_chunk(text)
 
         if not _chunk_quality_ok(chunks):
-            print(f"  ↩️  Level 4 poor → Level 2 recursive fallback")
+            print(f" Level 4 poor → Level 2 recursive fallback")
             chunks = level2_recursive_chunk(text)
 
     elif doc_type == "dense":
@@ -318,7 +368,7 @@ async def smart_chunk(text: str) -> list[dict]:
         chunks = await level4_semantic_chunk(text)
 
         if not _chunk_quality_ok(chunks):
-            print(f"  ↩️  Semantic poor → Level 2 recursive fallback")
+            print(f"Semantic poor → Level 2 recursive fallback")
             chunks = level2_recursive_chunk(text)
 
     else:  # mixed
@@ -334,7 +384,7 @@ async def smart_chunk(text: str) -> list[dict]:
     chunks = [c for c in chunks if len(c["text"].split()) >= 10]
 
     avg_w = sum(len(c["text"].split()) for c in chunks) / max(len(chunks), 1)
-    print(f"  ✂️  {len(chunks)} chunks | avg {avg_w:.0f} words | "
+    print(f" {len(chunks)} chunks | avg {avg_w:.0f} words | "
           f"types: {set(c['type'] for c in chunks)}")
 
     return chunks
@@ -420,12 +470,12 @@ async def upload_document(
 
         document.status      = DocumentStatus.READY
         document.chunk_count = len(chunks)
-        print(f"  ✅ {file.filename} → {len(chunks)} chunks stored")
+        print(f"  {file.filename} → {len(chunks)} chunks stored")
 
     except Exception as e:
         document.status    = DocumentStatus.FAILED
         document.error_msg = str(e)
-        print(f"  ❌ Failed: {e}")
+        print(f"  Failed: {e}")
 
     await db.commit()
     await db.refresh(document)

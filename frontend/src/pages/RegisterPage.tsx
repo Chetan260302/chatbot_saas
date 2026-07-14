@@ -22,6 +22,7 @@ export default function RegisterPage() {
   const [error,   setError]   = useState('')
   const [loading, setLoading] = useState(false)
   const [registered, setRegistered] = useState(false)
+  const [verificationRequired, setVerificationRequired] = useState(true)
 
   useEffect(() => {
     if (isLoggedIn) navigate('/dashboard', { replace: true })
@@ -58,8 +59,14 @@ export default function RegisterPage() {
         email:        form.email,
         password:     form.password,
       })
+      const isReq = res.verification_required ?? true
+      setVerificationRequired(isReq)
       setRegistered(true)
-      toast.success('Registration successful! Check your email to verify.')
+      if (isReq) {
+        toast.success('Registration successful! Check your email to verify.')
+      } else {
+        toast.success('Registration successful! You can now log in.')
+      }
       if (res.dev_verification_url) {
         console.log("DEV ONLY Verification Link:", res.dev_verification_url)
       }
@@ -85,8 +92,8 @@ export default function RegisterPage() {
 
   return (
     <AuthLayout
-      title={registered ? "Verify your email" : "Create your account"}
-      subtitle={registered ? "We generated a verification link" : "Set up your AI chatbot platform in minutes"}
+      title={registered ? (verificationRequired ? "Verify your email" : "Registration Successful") : "Create your account"}
+      subtitle={registered ? (verificationRequired ? "We generated a verification link" : "Your account is ready to use") : "Set up your AI chatbot platform in minutes"}
       wide={!registered}
     >
       {registered ? (
@@ -95,8 +102,16 @@ export default function RegisterPage() {
             color: 'var(--color-cream)', fontSize: 14, lineHeight: 1.6,
             fontFamily: 'Plus Jakarta Sans, sans-serif'
           }}>
-            Your registration was successful! Before you can log in, you must verify your email address.
-            Check your terminal/console logs in development mode to find the verification link.
+            {verificationRequired ? (
+              <>
+                Your registration was successful! Before you can log in, you must verify your email address.
+                Check your terminal/console logs in development mode to find the verification link.
+              </>
+            ) : (
+              <>
+                Your registration was successful! You can log in and start configuring your chatbots immediately.
+              </>
+            )}
           </p>
           <Link to="/login" style={{ color: '#fb923c', textDecoration: 'none', fontWeight: 600, fontSize: 14 }}>
             Go to Sign In →
