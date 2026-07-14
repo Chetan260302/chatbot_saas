@@ -80,7 +80,7 @@ async def invite_member(
         hashed_password=hash_password(temp_password),
         role=data.role,
         is_active=True,
-        is_verified=False,
+        is_verified=True, # later False 
         tenant_id=tenant.id,
     )
     db.add(new_user)

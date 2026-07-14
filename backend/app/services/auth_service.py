@@ -60,13 +60,13 @@ async def register_tenant(data: TenantRegisterRequest, db: AsyncSession) -> Regi
         hashed_password=hash_password(data.password),
         role=UserRole.OWNER,
         tenant_id=tenant.id,
-        is_verified=False,
+        is_verified=True, # later False, true when has proper domain
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
 
-    # Generate email verification token
+    # Generate email verification token now for testing
     import uuid
     from app.core.rate_limiter import redis_client
     verification_token = str(uuid.uuid4())
