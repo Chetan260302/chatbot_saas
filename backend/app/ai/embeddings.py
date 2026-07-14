@@ -1,18 +1,5 @@
 # backend/app/ai/embeddings.py
-from langchain_ollama import OllamaEmbeddings
 from app.core.config import settings
-
-# Singleton — created once, reused for all embedding calls
-# embeddings_model = OllamaEmbeddings(
-#     model=settings.EMBEDDING_MODEL,  # nomic-embed-text
-#     base_url=settings.OLLAMA_BASE_URL,  # http://localhost:11434
-# )
-
-# Alternative: HuggingFace embeddings (requires: pip install langchain-huggingface)
-# from langchain_huggingface import HuggingFaceEmbeddings
-# embeddings_model = HuggingFaceEmbeddings(
-#     model_name="sentence-transformers/all-MiniLM-L6-v2"
-# )
 
 
 _embeddings_model = None

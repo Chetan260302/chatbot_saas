@@ -1,5 +1,7 @@
 # backend/app/ai/rag_pipeline.py
-from langchain_ollama import ChatOllama
+# NOTE: Heavy AI imports (langchain_groq, langchain_ollama) are loaded lazily
+# inside get_llm() to avoid importing them at startup. This ensures uvicorn
+# binds to the port instantly on Render's free tier (512MB RAM).
 from langchain_core.messages import HumanMessage, SystemMessage
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
@@ -9,26 +11,24 @@ from app.ai.embeddings import embed_text, embed_texts
 from app.models.document import Document
 from typing import AsyncGenerator
 import json
-from langchain_groq import ChatGroq
 from app.ai.domain_concepts import get_domain_hints, get_domain_examples, DOMAIN_CONCEPTS
 from app.db.session import AsyncSessionLocal
 
 
-# The LLM — runs locally via Ollama
-# llm = ChatOllama(
-#     model=settings.LLM_MODEL,          # llama3.2
-#     base_url=settings.OLLAMA_BASE_URL,
-#     temperature=0.1,   # low = more factual, less creative — good for business bots
-#     streaming=True,
-# )
+_llm = None
 
-llm = ChatGroq(
-    model=settings.GROQ_MODEL,
-    api_key=settings.GROQ_API_KEY,
-    temperature=0.0,  # ← was 0.1, now 0 = fully deterministic, no creativity
-    max_tokens=1024,  # max tokens in response
-    # repeat_penalty=1.1,    # reduces repetition
-)
+def get_llm():
+    """Lazily create the ChatGroq LLM on first use."""
+    global _llm
+    if _llm is None:
+        from langchain_groq import ChatGroq
+        _llm = ChatGroq(
+            model=settings.GROQ_MODEL,
+            api_key=settings.GROQ_API_KEY,
+            temperature=0.0,
+            max_tokens=1024,
+        )
+    return _llm
 
 
 async def generate_hypothetical_answer(question: str) -> str:
@@ -43,7 +43,7 @@ a section from an official document or article.
 Do not say 'I think' or 'probably'. Just write the passage directly."""),
         HumanMessage(content=question)
     ]
-    response = await llm.ainvoke(hyde_prompt)
+    response = await get_llm().ainvoke(hyde_prompt)
     return response.content
 
 
@@ -252,7 +252,7 @@ Rules:
         HumanMessage(content=question)
     ]
 
-    response = await llm.ainvoke(prompt)
+    response = await get_llm().ainvoke(prompt)
     try:
         import json as _json
         raw      = response.content.strip()
@@ -404,7 +404,7 @@ async def generate_query_variations(question: str) -> list[str]:
 Output ONLY the 3 questions, one per line, no numbering, no explanation."""),
         HumanMessage(content=question)
     ]
-    response = await llm.ainvoke(prompt)
+    response = await get_llm().ainvoke(prompt)
     variations = [q.strip() for q in response.content.strip().split('\n') if q.strip()]
     return [question] + variations[:2]  # original + 2 variations = 3 total
 
@@ -502,6 +502,6 @@ async def stream_chat_response(
     
     messages = build_prompt(system_prompt, chunks, question, bot_name=bot_name)  # ← pass
 
-    async for chunk in llm.astream(messages):
+    async for chunk in get_llm().astream(messages):
         if chunk.content:
             yield chunk.content

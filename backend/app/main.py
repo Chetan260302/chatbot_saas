@@ -1,13 +1,19 @@
 # backend/app/main.py
+import sys
+print("[STARTUP] Importing FastAPI...", flush=True)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
+print("[STARTUP] Loading config...", flush=True)
 from app.core.config import settings
+
+print("[STARTUP] Loading DB engine...", flush=True)
 from app.db.session import engine
 import app.db.registry  # noqa: F401, F403 - import all models for SQLAlchemy
 from app.db.base import Base
 
+print("[STARTUP] Loading routers...", flush=True)
 from app.api.v1.endpoints.auth      import router as auth_router
 from app.api.v1.endpoints.chatbots  import router as chatbots_router
 from app.api.v1.endpoints.documents import router as documents_router
@@ -18,23 +24,28 @@ from app.api.v1.endpoints.admin     import router as admin_router
 from app.api.v1.endpoints.team      import router as team_router
 
 from sqlalchemy import text
+print("[STARTUP] All imports complete!", flush=True)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Runs on startup and shutdown."""
-    # Startup: create all tables (Alembic handles prod migrations)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        await conn.execute(text("ALTER TABLE chatbots ADD COLUMN IF NOT EXISTS slug VARCHAR(255) UNIQUE;"))
-        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN DEFAULT FALSE;"))
-        await conn.execute(text("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP WITHOUT TIME ZONE;"))
-        await conn.execute(text("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan_started_at TIMESTAMP WITHOUT TIME ZONE;"))
-    print(f"✅ {settings.APP_NAME} started — {settings.ENVIRONMENT} mode")
+    print("[LIFESPAN] Connecting to database...", flush=True)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            await conn.execute(text("ALTER TABLE chatbots ADD COLUMN IF NOT EXISTS slug VARCHAR(255) UNIQUE;"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN DEFAULT FALSE;"))
+            await conn.execute(text("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP WITHOUT TIME ZONE;"))
+            await conn.execute(text("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan_started_at TIMESTAMP WITHOUT TIME ZONE;"))
+        print(f"✅ {settings.APP_NAME} started — {settings.ENVIRONMENT} mode", flush=True)
+    except Exception as e:
+        print(f"❌ [LIFESPAN] Database connection failed: {e}", flush=True)
+        print("[LIFESPAN] Server will start without DB initialization", flush=True)
     yield
     # Shutdown: cleanup if needed
     await engine.dispose()
-    print("👋 Server shutting down")
+    print("👋 Server shutting down", flush=True)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
