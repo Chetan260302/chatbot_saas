@@ -1,4 +1,5 @@
 # backend/app/api/v1/endpoints/auth.py
+from app.core.config import settings
 from app.core.dependencies import get_current_tenant
 from app.models.tenant import Tenant
 from fastapi import APIRouter, Depends
@@ -122,7 +123,7 @@ async def forgot_password(
     key = f"reset_password_token:{token}"
     await redis_client.set(key, str(user.id), ex=900)
     
-    reset_url = f"http://localhost:5173/reset-password?token={token}"
+    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
     print(f"PASSWORD RESET LINK GENERATED: {reset_url}")
     
     return {

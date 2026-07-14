@@ -7,7 +7,7 @@ from app.models.tenant import Tenant
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token
 from app.schemas.auth import TenantRegisterRequest, LoginRequest, TokenResponse, RegisterResponse
 import re
-
+from app.core.config import settings
 
 def slugify(text: str) -> str:
     """Convert 'Acme Corp' → 'acme-corp' for URL-friendly tenant slug."""
@@ -73,7 +73,7 @@ async def register_tenant(data: TenantRegisterRequest, db: AsyncSession) -> Regi
     key = f"email_verification_token:{verification_token}"
     await redis_client.set(key, str(user.id), ex=86400) # 24h
 
-    verification_url = f"http://localhost:5173/verify-email?token={verification_token}"
+    verification_url = f"{settings.FRONTEND_URL}/verify-email?token={verification_token}"
     print(f"EMAIL VERIFICATION LINK GENERATED: {verification_url}")
 
     return RegisterResponse(
@@ -111,7 +111,7 @@ async def login_user(data: LoginRequest, db: AsyncSession) -> TokenResponse:
         from app.core.rate_limiter import redis_client
         token = str(uuid.uuid4())
         await redis_client.set(f"email_verification_token:{token}", str(user.id), ex=86400)
-        verification_url = f"http://localhost:5173/verify-email?token={token}"
+        verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
         print(f"RESENT EMAIL VERIFICATION LINK: {verification_url}")
         
         raise HTTPException(

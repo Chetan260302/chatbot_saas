@@ -34,7 +34,9 @@ services:
       - key: GROQ_MODEL
         sync: false
       - key: ALLOWED_ORIGINS
-        value: "http://localhost:5173"
+        value: "http://localhost:5173,https://botifyapp.vercel.app"
+      - key: FRONTEND_URL
+        value: "https://botifyapp.vercel.app"
       - key: HF_TOKEN
         sync: false
       - key: PYTHONUNBUFFERED

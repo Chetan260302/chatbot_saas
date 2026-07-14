@@ -12,6 +12,7 @@ import secrets
 from app.db.session import get_db
 from app.core.dependencies import get_current_user, get_current_tenant, require_role
 from app.core.security import hash_password
+from app.core.config import settings
 from app.models.user import User
 from app.models.tenant import Tenant
 from app.schemas.team import (
@@ -88,7 +89,7 @@ async def invite_member(
     await db.refresh(new_user)
 
     # Stub: log the invite link to console (real email sending comes later)
-    invite_url = f"http://localhost:5173/login?invited=true&email={data.email}"
+    invite_url = f"{settings.FRONTEND_URL}/login?invited=true&email={data.email}"
     print(f"📧 TEAM INVITE — {data.email} invited as '{data.role}' to tenant '{tenant.name}'")
     print(f"   Temporary password: {temp_password}")
     print(f"   Invite URL: {invite_url}")
