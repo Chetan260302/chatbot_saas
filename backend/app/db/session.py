@@ -8,6 +8,8 @@ engine = create_async_engine(
     echo=settings.DEBUG,       # logs SQL in dev, disable in prod
     pool_size=10,              # max 10 persistent connections
     max_overflow=20,           # up to 20 extra under load
+    pool_pre_ping=True,        # test connection before execution
+    pool_recycle=30,           # recycle connection before Neon idle timeout
     connect_args={
         "command_timeout": 15,
         "timeout": 15,
