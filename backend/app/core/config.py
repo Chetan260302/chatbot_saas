@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     GROQ_API_KEY: str
     GROQ_MODEL: str = "llama-3.1-8b-instant"
-    HF_TOKEN: str = ""  # free token from https://huggingface.co/settings/tokens
+    HF_TOKEN: str  # free token from https://huggingface.co/settings/tokens
 
     # ── File Storage ──────────────────────────────────
     UPLOAD_DIR: str = "./uploads"

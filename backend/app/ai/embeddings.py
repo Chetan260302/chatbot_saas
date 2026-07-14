@@ -7,7 +7,8 @@ import numpy as np
 from app.core.config import settings
 
 HF_MODEL = "BAAI/bge-base-en"
-HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
+# HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
+HF_API_URL = "https://router.huggingface.co/hf-inference/models/BAAI/bge-base-en/pipeline/feature-extraction"
 BGE_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 
 # Timeout accommodates HF cold starts (model loading on first request)

@@ -1,47 +1,30 @@
-# backend/test_hf_embed.py
-"""
-Quick test: verifies the HF Inference API integration produces
-768-dim embeddings from BAAI/bge-base-en.
+# test_hf_embed.py
 
-Usage:
-    cd backend
-    python test_hf_embed.py
-"""
-import asyncio
-import sys
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Same logic as config.py — .env is in the project root, one level above backend/
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=ENV_FILE)
+
 import os
+import asyncio
+import httpx
 
-# Ensure the backend package is importable
-sys.path.insert(0, os.path.dirname(__file__))
+HF_TOKEN = os.getenv("HF_TOKEN")
+print(f"Token is: {repr(HF_TOKEN)}")
+print(f"Token length: {len(HF_TOKEN) if HF_TOKEN else 0}")
 
+HF_API_URL = "https://router.huggingface.co/hf-inference/models/BAAI/bge-base-en/pipeline/feature-extraction"
 
 async def main():
-    from app.ai.embeddings import embed_text, embed_texts
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            HF_API_URL,
+            headers={"Authorization": f"Bearer {HF_TOKEN}"},
+            json={"inputs": ["What is the refund policy?"], "options": {"wait_for_model": True}},
+        )
+        print(resp.status_code)
+        print(resp.text)
 
-    print("Testing embed_text (single, is_query=True) ...")
-    vec = await embed_text("What are your business hours?")
-    print(f"  Dimension: {len(vec)}  (expected 768)")
-    print(f"  First 5 values: {vec[:5]}")
-    assert len(vec) == 768, f"Expected 768, got {len(vec)}"
-
-    print("\nTesting embed_text (single, is_query=False) ...")
-    vec2 = await embed_text("Our office is open from 9 AM to 5 PM.", is_query=False)
-    print(f"  Dimension: {len(vec2)}  (expected 768)")
-    print(f"  First 5 values: {vec2[:5]}")
-    assert len(vec2) == 768, f"Expected 768, got {len(vec2)}"
-
-    print("\nTesting embed_texts (batch, is_query=False) ...")
-    vecs = await embed_texts([
-        "We accept Visa and MasterCard.",
-        "Free shipping on orders over $50.",
-    ])
-    print(f"  Batch size: {len(vecs)}  (expected 2)")
-    for i, v in enumerate(vecs):
-        print(f"  [{i}] Dimension: {len(v)}, first 3: {v[:3]}")
-        assert len(v) == 768, f"Expected 768, got {len(v)}"
-
-    print("\n✅ All tests passed!")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+asyncio.run(main())
