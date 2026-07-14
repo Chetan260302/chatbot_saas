@@ -6,7 +6,7 @@ services:
     region: singapore          # pick closest to your Neon/Upstash region
     plan: free
     rootDir: backend
-    buildCommand: "pip install -r requirements.txt && python download_model.py"
+    buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: PYTHON_VERSION
@@ -35,7 +35,7 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         value: "http://localhost:5173"
-      - key: HF_HOME
-        value: ./hf_cache
+      - key: HF_TOKEN
+        sync: false
       - key: PYTHONUNBUFFERED
         value: "1"
