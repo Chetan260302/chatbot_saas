@@ -31,17 +31,14 @@ print("[STARTUP] All imports complete!", flush=True)
 async def lifespan(app: FastAPI):
     """Runs on startup and shutdown."""
     print("[LIFESPAN] Connecting to database...", flush=True)
-    try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-            await conn.execute(text("ALTER TABLE chatbots ADD COLUMN IF NOT EXISTS slug VARCHAR(255) UNIQUE;"))
-            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN DEFAULT FALSE;"))
-            await conn.execute(text("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP WITHOUT TIME ZONE;"))
-            await conn.execute(text("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan_started_at TIMESTAMP WITHOUT TIME ZONE;"))
-        print(f"✅ {settings.APP_NAME} started — {settings.ENVIRONMENT} mode", flush=True)
-    except Exception as e:
-        print(f"❌ [LIFESPAN] Database connection failed: {e}", flush=True)
-        print("[LIFESPAN] Server will start without DB initialization", flush=True)
+    # DB initialization runs at startup. If it fails, uvicorn will crash and fail the deploy.
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(text("ALTER TABLE chatbots ADD COLUMN IF NOT EXISTS slug VARCHAR(255) UNIQUE;"))
+        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN DEFAULT FALSE;"))
+        await conn.execute(text("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP WITHOUT TIME ZONE;"))
+        await conn.execute(text("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan_started_at TIMESTAMP WITHOUT TIME ZONE;"))
+    print(f"✅ {settings.APP_NAME} started — {settings.ENVIRONMENT} mode", flush=True)
     yield
     # Shutdown: cleanup if needed
     await engine.dispose()
@@ -49,19 +46,29 @@ async def lifespan(app: FastAPI):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Main App — private/dashboard routes (strict CORS)
+# Main Top-Level Application (routes requests, has NO global CORS)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 app = FastAPI(
     title=settings.APP_NAME,
     version="1.0.0",
     description="Industry-grade AI Chatbot SaaS API",
-    docs_url="/docs" if settings.DEBUG else None,   # hide Swagger in production
-    redoc_url="/redoc" if settings.DEBUG else None,
+    docs_url=None,
+    redoc_url=None,
     lifespan=lifespan,
 )
 
-# CORS for dashboard / admin — only trusted origins, with cookies
-app.add_middleware(
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Sub-App 1: Dashboard / Admin API (strict CORS, supports cookies)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+dashboard_app = FastAPI(
+    title=f"{settings.APP_NAME} — Dashboard API",
+    version="1.0.0",
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
+)
+
+dashboard_app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
@@ -69,51 +76,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Private routers (require JWT / session cookie) ────────────────
-app.include_router(auth_router,      prefix=settings.API_V1_PREFIX)
-app.include_router(chatbots_router,  prefix=settings.API_V1_PREFIX)
-app.include_router(documents_router, prefix=settings.API_V1_PREFIX)
-app.include_router(chat_router,      prefix=settings.API_V1_PREFIX)
-app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)
-app.include_router(admin_router,     prefix=settings.API_V1_PREFIX)
-app.include_router(team_router,      prefix=settings.API_V1_PREFIX)
+# Include private routers (paths will be prefixed by the mount path /api/v1)
+dashboard_app.include_router(auth_router)
+dashboard_app.include_router(chatbots_router)
+dashboard_app.include_router(documents_router)
+dashboard_app.include_router(chat_router)
+dashboard_app.include_router(analytics_router)
+dashboard_app.include_router(admin_router)
+dashboard_app.include_router(team_router)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Public Sub-App — widget / embeddable routes (permissive CORS)
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Mounted as a separate FastAPI app so it gets its own CORSMiddleware
-# instance. This is the idiomatic FastAPI pattern for dual-CORS.
-#
-# Security notes:
-#   • allow_credentials=False  → browsers won't send cookies/tokens
-#   • Authentication is via X-API-Key header, not cookies
-#   • Rate limiting is already applied on these endpoints
+# Sub-App 2: Public Widget API (permissive CORS, allows null / any origin)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 public_app = FastAPI(
     title=f"{settings.APP_NAME} — Public Widget API",
     version="1.0.0",
-    docs_url="/docs" if settings.DEBUG else None,
+    docs_url=None,
     redoc_url=None,
 )
 
-# CORS for widgets — any origin, NO credentials (API-key auth only)
 public_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,       # ← critical: never send cookies cross-origin
+    allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "X-API-Key"],
 )
 
-# The public_chat router has prefix="/public", so its endpoints sit at
-# /public/chat/stream. After mounting at /api/v1, full path becomes
-# /api/v1/public/chat/stream — same as before. No URL changes needed.
+# Include the public chat router
 public_app.include_router(public_chat_router)
 
-# Mount the public sub-app on the main app
-# Path: /api/v1  +  router prefix /public  →  /api/v1/public/chat/stream
-app.mount(f"{settings.API_V1_PREFIX}", public_app)
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Mount Sub-Apps
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Mount public API first so it has precedence, then dashboard API
+app.mount(f"{settings.API_V1_PREFIX}/public", public_app)
+app.mount(f"{settings.API_V1_PREFIX}", dashboard_app)
 
 
 # ── Root-level endpoints ──────────────────────────────────────────
@@ -127,11 +127,3 @@ async def root():
 async def health_check():
     """Simple health check used by Docker and load balancers."""
     return {"status": "ok", "environment": settings.ENVIRONMENT}
-
-# from fastapi import FastAPI
-
-# app = FastAPI()
-
-# @app.get("/")
-# async def root():
-#     return {"status": "working"}

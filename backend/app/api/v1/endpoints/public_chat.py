@@ -15,7 +15,7 @@ from app.models.message import Message
 from app.schemas.chat import ChatRequest
 from app.ai.rag_pipeline import stream_chat_response
 
-router = APIRouter(prefix="/public", tags=["Public Widget"])
+router = APIRouter(prefix="", tags=["Public Widget"])
 
 
 from app.core.rate_limiter import rate_limit
