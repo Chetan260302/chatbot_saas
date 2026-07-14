@@ -55,12 +55,25 @@ async def _call_hf_api(texts: list[str]) -> list[list[float]]:
     return data
 
 
-def _normalize(vec: list[float]) -> list[float]:
-    """L2-normalize an embedding vector."""
+def _pool_and_normalize(vec: list) -> list[float]:
+    """
+    Ensures the embedding is a flat 1D vector of shape [768],
+    applying mean pooling if the API returned unpooled token embeddings (2D matrix).
+    Then L2-normalizes the vector.
+    """
     arr = np.array(vec, dtype=np.float32)
+    
+    # If the vector is unpooled (2D matrix of shape [sequence_length, embedding_dim])
+    if arr.ndim == 2:
+        # Perform mean pooling across the sequence length (axis 0)
+        arr = np.mean(arr, axis=0)
+    elif arr.ndim > 2:
+        # Flatten anything else (e.g. batch dimension if present)
+        arr = np.mean(arr, axis=tuple(range(arr.ndim - 1)))
+        
     norm = np.linalg.norm(arr)
     if norm == 0:
-        return vec
+        return arr.tolist()
     return (arr / norm).tolist()
 
 
@@ -75,7 +88,7 @@ async def embed_text(text: str, is_query: bool = True) -> list[float]:
         text = BGE_QUERY_PREFIX + text
 
     vectors = await _call_hf_api([text])
-    return _normalize(vectors[0])
+    return _pool_and_normalize(vectors[0])
 
 
 async def embed_texts(texts: list[str], is_query: bool = False) -> list[list[float]]:
@@ -87,4 +100,4 @@ async def embed_texts(texts: list[str], is_query: bool = False) -> list[list[flo
         texts = [BGE_QUERY_PREFIX + t for t in texts]
 
     vectors = await _call_hf_api(texts)
-    return [_normalize(v) for v in vectors]
+    return [_pool_and_normalize(v) for v in vectors]

@@ -86,9 +86,16 @@ async def retrieve_relevant_chunks(
     print(f"  📝 [{domain}] Searching with {len(all_queries)} variants: {all_queries[:4]}...")
 
     all_embeddings     = await embed_texts(all_queries, is_query=True)
+    
+    # Safety check: filter out any invalid or non-768-dim embeddings
+    all_embeddings = [emb for emb in all_embeddings if isinstance(emb, list) and len(emb) == 768]
+    if not all_embeddings:
+        raise ValueError("No valid 768-dimensional embeddings returned from the API")
+
     combined           = np.mean(all_embeddings, axis=0)
     norm               = np.linalg.norm(combined)
     query_combined_emb = (combined / norm if norm > 0 else combined).tolist()
+    query_combined_emb_len = len(query_combined_emb)
     query_embedding_str = "[" + ",".join(str(x) for x in query_combined_emb) + "]"
 
 
