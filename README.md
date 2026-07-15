@@ -9,43 +9,57 @@ Botify is a premium, multi-tenant AI Chatbot SaaS platform that allows businesse
 
 ### 1. Interactive 3D Landing Page
 
-> <img width="1891" height="1027" alt="image" src="https://github.com/user-attachments/assets/e578a22c-b884-47d0-8227-35e560e171b8" />
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/e578a22c-b884-47d0-8227-35e560e171b8" width="48%" />
+  <img src="https://github.com/user-attachments/assets/45dac1b7-832a-4d1c-b793-74d081fbf24e" width="48%" />
+</div>
 
-> <img width="1702" height="1017" alt="image" src="https://github.com/user-attachments/assets/45dac1b7-832a-4d1c-b793-74d081fbf24e" />
+<br>
 
-> <img width="1790" height="1001" alt="image" src="https://github.com/user-attachments/assets/66c1f74c-52e5-4a09-8282-8d9dbb10ed76" />
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/66c1f74c-52e5-4a09-8282-8d9dbb10ed76" width="800" />
+</div>
 
+---
 
 ### 2. Multi-Tenant Dashboard
 
-> <img width="1912" height="1002" alt="image" src="https://github.com/user-attachments/assets/30006075-d2d0-4710-a80d-540a8d936a86" />
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/30006075-d2d0-4710-a80d-540a8d936a86" width="48%" />
+  <img src="https://github.com/user-attachments/assets/66657fc0-fc2f-482d-ae61-3074bb688dc3" width="48%" />
+</div>
 
-> <img width="1912" height="1025" alt="image" src="https://github.com/user-attachments/assets/66657fc0-fc2f-482d-ae61-3074bb688dc3" />
+---
 
+## 3. Document Processing & Ingestion
 
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/97e073ce-27f2-4724-a661-0d9f300d5c8e" width="800" />
+</div>
 
-### 3. Document Processing & Ingestion
-
-> <img width="1917" height="1012" alt="image" src="https://github.com/user-attachments/assets/97e073ce-27f2-4724-a661-0d9f300d5c8e" />
-
-> 
-
+---
 
 ### 4. Interactive Chat Playroom & Playground
 
-> <img width="1906" height="1030" alt="image" src="https://github.com/user-attachments/assets/36db81e8-3fd7-47e1-9b36-fb9901e2da8f" />
-> 
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/36db81e8-3fd7-47e1-9b36-fb9901e2da8f" width="800" />
+</div>
 
+---
 
-### 5. Settings For API key change password
+### 5. Settings For API Key & Change Password
 
-> <img width="1892" height="982" alt="image" src="https://github.com/user-attachments/assets/dd3e9c72-ddce-40cf-a37a-5718b1478ad1" />
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/dd3e9c72-ddce-40cf-a37a-5718b1478ad1" width="800" />
+</div>
 
+---
 
+### 6. SuperAdmin Routes
 
-### 6. SuperAdmin routes
-
-> <img width="1906" height="1025" alt="image" src="https://github.com/user-attachments/assets/d4a4b830-4375-4648-af45-a1918ef06615" />
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/d4a4b830-4375-4648-af45-a1918ef06615" width="800" />
+</div>
 
 
 ---
