@@ -39,7 +39,18 @@ def extract_text(file_path: Path, file_type: str) -> str:
         for i, page in enumerate(reader.pages):
             text = page.extract_text() or ""
             pages.append(f"[Page {i+1}]\n{text}")
-        return "\n\n".join(pages)
+        
+        full_text = "\n\n".join(pages)
+        # Check if the PDF has actual alphanumeric content (scanned PDFs will be nearly empty)
+        alnum_count = sum(1 for char in full_text if char.isalnum())
+        if alnum_count < 20:
+            raise ValueError(
+                "This PDF appears to be scanned or image-based with no "
+                "extractable text. OCR support is not yet available — "
+                "please upload a PDF with selectable text, or a plain "
+                "text/DOCX version of this document."
+            )
+        return full_text
 
     elif file_type == "docx":
         # pyrefly: ignore [missing-import]
@@ -345,7 +356,7 @@ async def smart_chunk(text: str) -> list[dict]:
     # If the text is very long, divide it into smaller parts to prevent OOM
     part_size = 45000  # ~7,000 words per part
     if len(text) > part_size:
-        print(f" 📦 Document size ({len(text)} chars) is large. Processing in parts...")
+        print(f"Document size ({len(text)} chars) is large. Processing in parts...")
         parts = []
         current_part = []
         current_len = 0
