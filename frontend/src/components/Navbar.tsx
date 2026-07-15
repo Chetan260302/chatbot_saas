@@ -51,6 +51,12 @@ export default function Navbar({
       {/* Logo */}
       <Link
         to="/"
+        onClick={(e) => {
+          if (window.location.pathname === '/') {
+            e.preventDefault()
+            window.location.href = '/'
+          }
+        }}
         style={{
           display: 'flex',
           alignItems: 'center',

@@ -15,7 +15,10 @@ export default function HeroSection({ theme }: HeroSectionProps) {
   const charRef    = useRef<HTMLDivElement>(null)
   const textRef    = useRef<HTMLDivElement>(null)
   const hintRef    = useRef<HTMLDivElement>(null)
-  const scrollProgressRef = useRef(0)
+
+  // Initialize scroll progress immediately to 1.76 if loaded with a hash or scroll offset
+  const initialProgress = typeof window !== 'undefined' && (window.location.hash || window.scrollY > 50) ? 1.76 : 0.0
+  const scrollProgressRef = useRef(initialProgress)
   const isDark = theme === 'dark'
 
   // Section-tracking refs (no re-renders needed)
@@ -56,7 +59,12 @@ export default function HeroSection({ theme }: HeroSectionProps) {
     }
   }, [])
 
-  const [isUnlocked, setIsUnlocked] = useState(false)
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !!window.location.hash || window.scrollY > 50
+    }
+    return false
+  })
   const animRunningRef = useRef(false)
   const isUnlockedRef = useRef(false)
 
@@ -77,6 +85,27 @@ export default function HeroSection({ theme }: HeroSectionProps) {
       document.body.style.overflow = ''
     }
   }, [isUnlocked])
+
+  // Automatically unlock if page is scrolled or has a hash (handles refresh at hash, back/forward, and navbar clicks)
+  useEffect(() => {
+    const handleScrollCheck = () => {
+      if (window.scrollY > 50 || window.location.hash) {
+        setIsUnlocked(true)
+        scrollProgressRef.current = 1.0
+      }
+    }
+    
+    window.addEventListener('scroll', handleScrollCheck, { passive: true })
+    window.addEventListener('hashchange', handleScrollCheck, { passive: true })
+    
+    // Run initial check
+    handleScrollCheck()
+    
+    return () => {
+      window.removeEventListener('scroll', handleScrollCheck)
+      window.removeEventListener('hashchange', handleScrollCheck)
+    }
+  }, [])
 
   // ── Intro animation (before unlock) ──
   useEffect(() => {
@@ -260,6 +289,7 @@ export default function HeroSection({ theme }: HeroSectionProps) {
 
       } else {
         // ── Phase B: Fully transitioned — section tracking mode ──
+        scrollProgressRef.current = 1.76 // Ensure scroll progress is set to maximum so bot is shrunken
         el.style.zIndex = '150'
 
         // Determine which section is closest to viewport center
@@ -290,6 +320,12 @@ export default function HeroSection({ theme }: HeroSectionProps) {
             y: endY,
             duration: 0.9,
             ease: 'power3.out',
+          })
+        } else if (!lastSideTweenRef.current) {
+          // If side matches initial side and no animation has positioned it yet, set position instantly
+          gsap.set(el, {
+            x: newSide === 'right' ? endX_right : endX_left,
+            y: endY,
           })
         }
 
@@ -358,6 +394,7 @@ export default function HeroSection({ theme }: HeroSectionProps) {
       <div style={{
         position: 'sticky',
         top: 0,
+        width: '100%',
         height: sizes.heroHeight,
         display: 'flex',
         alignItems: 'center',
@@ -394,7 +431,7 @@ export default function HeroSection({ theme }: HeroSectionProps) {
           </div>
         </div>
 
-        {/* Scroll hint */}
+        {/* Scroll hint — positioned inside the full-width sticky viewport to guarantee visual center without scrolling off-viewport */}
         <div ref={hintRef} style={{
           position: 'absolute',
           bottom: 'max(32px, 5vh)',
@@ -407,6 +444,7 @@ export default function HeroSection({ theme }: HeroSectionProps) {
           alignItems: 'center',
           gap: 12,
           animation: 'fade-in-up 1s ease 0.8s both',
+          pointerEvents: 'none',
         }}>
           <p style={{
             color: isDark ? '#78716c' : '#92400e',
@@ -415,13 +453,14 @@ export default function HeroSection({ theme }: HeroSectionProps) {
             fontFamily: 'Plus Jakarta Sans, sans-serif',
             textTransform: 'uppercase',
             letterSpacing: '0.18em',
+            paddingLeft: '0.18em', // Symmetrically offset the right-side letter-spacing to center the text perfectly
             margin: 0,
           }}>
             Explore
           </p>
           {/* Animated line */}
           <div style={{
-            width: 1.5,
+            width: 2, // 2px width centers perfectly without subpixel browser snap offsets
             height: 'clamp(32px, 4vh, 48px)',
             background: isDark
               ? 'linear-gradient(to bottom, #ea580c, transparent)'
@@ -566,6 +605,17 @@ function TextContent({ isDark }: { isDark: boolean }) {
           </div>
         ))}
       </div>
+
+      <p style={{
+        margin: '4px 0 0',
+        fontSize: 10,
+        fontStyle: 'italic',
+        color: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.45)',
+        fontFamily: 'Plus Jakarta Sans, sans-serif',
+        textAlign: 'left',
+      }}>
+        * Statistics displayed above are simulated for demonstration purposes.
+      </p>
     </div>
   )
 }
