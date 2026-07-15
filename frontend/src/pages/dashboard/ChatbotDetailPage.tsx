@@ -251,6 +251,7 @@ function DocumentsTab({
   const [uploadProgress, setUploadProgress] = useState(0)
   const [dragOver,       setDragOver]       = useState(false)
   const [selectedFile,   setSelectedFile]   = useState<File | null>(null)
+  const [deleteDocId,    setDeleteDocId]    = useState<string | null>(null)
 
   const handleFileSelect = (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -286,7 +287,6 @@ function DocumentsTab({
   }
 
   const handleDelete = async (docId: string) => {
-    if (!confirm('Delete this document?')) return
     try {
       await documentsApi.delete(docId)
       setDocs(prev => prev.filter(d => d.id !== docId))
@@ -298,37 +298,69 @@ function DocumentsTab({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Drop zone / File Preview / Uploading */}
+      {/* Greyed out overlay during upload/processing */}
+      {uploading && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 999999,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '16px',
+        }}>
+          <div style={{
+            background: 'var(--dash-sidebar)',
+            border: '1px solid var(--dash-card-border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '32px 40px',
+            width: '100%',
+            maxWidth: 400,
+            textAlign: 'center',
+            boxShadow: '0 20px 48px rgba(0, 0, 0, 0.4)',
+            boxSizing: 'border-box',
+          }}>
+            <div className="animate-spin" style={{
+              width: 40, height: 40, border: '4px solid rgba(234, 88, 12, 0.2)',
+              borderTop: '4px solid #ea580c', borderRadius: '50%',
+              margin: '0 auto 16px',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+            <p style={{ color: 'var(--color-cream)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, margin: '0 0 8px' }}>
+              Processing Document...
+            </p>
+            <p style={{ color: 'var(--color-muted)', fontFamily: 'var(--font-body)', fontSize: 13, margin: '0 0 16px', lineHeight: 1.5 }}>
+              We are splitting, embedding and indexing your file. Please do not close this tab.
+            </p>
+            <div style={{
+              height: 6, background: 'var(--dash-card-border)', borderRadius: 3,
+              width: '100%', margin: '0 auto', overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%', borderRadius: 3,
+                width: `${uploadProgress}%`, background: '#ea580c',
+                transition: 'width 0.3s ease',
+              }} />
+            </div>
+            <p style={{ color: '#fb923c', fontWeight: 600, fontSize: 14, fontFamily: 'var(--font-body)', margin: '8px 0 0' }}>
+              {uploadProgress}%
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Drop zone / File Preview */}
       {!readOnly && (
         <>
-          {uploading ? (
-            <div
-              style={{
-                border: '1px solid var(--dash-card-border)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '48px 24px',
-                textAlign: 'center',
-                background: 'var(--dash-card)',
-              }}
-            >
-              <p style={{ color: '#fb923c', fontFamily: 'var(--font-body)', fontSize: 14, margin: '0 0 12px' }}>
-                Uploading & processing…
-              </p>
-              <div style={{
-                height: 4, background: 'var(--dash-card-border)', borderRadius: 2,
-                maxWidth: 280, margin: '0 auto',
-              }}>
-                <div style={{
-                  height: '100%', borderRadius: 2,
-                  width: `${uploadProgress}%`, background: '#ea580c',
-                  transition: 'width 0.3s ease',
-                }} />
-              </div>
-              <p style={{ color: 'var(--color-muted)', fontSize: 12, fontFamily: 'var(--font-body)', margin: '8px 0 0' }}>
-                {uploadProgress}%
-              </p>
-            </div>
-          ) : selectedFile ? (
+          {selectedFile ? (
             <div
               style={{
                 border: '1px solid var(--dash-card-border)',
@@ -479,7 +511,7 @@ function DocumentsTab({
               {/* Delete */}
               {!readOnly && (
                 <button
-                  onClick={() => handleDelete(doc.id)}
+                  onClick={() => setDeleteDocId(doc.id)}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     color: 'var(--color-subtle)', fontSize: 16,
@@ -496,6 +528,23 @@ function DocumentsTab({
           ))}
         </Card>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog
+        isOpen={deleteDocId !== null}
+        title="Delete Document?"
+        description="Are you sure you want to delete this document? This will remove all associated training data/chunks and cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={async () => {
+          if (deleteDocId) {
+            await handleDelete(deleteDocId)
+            setDeleteDocId(null)
+          }
+        }}
+        onCancel={() => setDeleteDocId(null)}
+        isDanger
+      />
     </div>
   )
 }
