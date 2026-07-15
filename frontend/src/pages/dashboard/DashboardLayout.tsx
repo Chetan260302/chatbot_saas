@@ -31,6 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { theme, toggleTheme } = useThemeStore()
   const isSuperadmin = user?.is_superadmin ?? false
   const [collapsed, setCollapsed] = useState(false)
+  const [isHeaderHovered, setIsHeaderHovered] = useState(false)
   const [usage, setUsage] = useState<any | null>(null)
 
   // Sync user profile on mount to handle DB updates immediately
@@ -77,48 +78,86 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }}>
 
         {/* Logo + collapse toggle */}
-        <div style={{
-          padding:      '20px 16px',
-          borderBottom: '1px solid var(--dash-card-border)',
-          display:      'flex',
-          alignItems:   'center',
-          justifyContent: collapsed ? 'center' : 'space-between',
-          gap:          10,
-        }}>
-          <Link to="/dashboard" style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            textDecoration: 'none',
-          }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-              background: 'linear-gradient(135deg, #ea580c, #fb923c)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 16, color: '#fff',
-              boxShadow: '0 0 16px rgba(234,88,12,0.4)',
-            }}>✦</div>
-            {!collapsed && (
-              <span style={{
-                fontFamily: 'var(--font-display)', fontWeight: 800,
-                fontSize: 18, color: 'var(--color-cream)', whiteSpace: 'nowrap',
-              }}>Botify</span>
-            )}
-          </Link>
+        <div
+          onMouseEnter={() => setIsHeaderHovered(true)}
+          onMouseLeave={() => setIsHeaderHovered(false)}
+          style={{
+            padding:      '20px 16px',
+            borderBottom: '1px solid var(--dash-card-border)',
+            display:      'flex',
+            alignItems:   'center',
+            justifyContent: collapsed ? 'center' : 'space-between',
+            gap:          10,
+            position:     'relative',
+            height:       73,
+            boxSizing:    'border-box',
+          }}
+        >
+          {/* If NOT collapsed, show logo and close button normally */}
           {!collapsed && (
-            <button onClick={() => setCollapsed(true)} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--color-muted)', display: 'flex', padding: 4,
-            }}>
-              <PanelLeftClose size={18} />
-            </button>
+            <>
+              <Link to="/dashboard" style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                textDecoration: 'none',
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+                  background: 'linear-gradient(135deg, #ea580c, #fb923c)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16, color: '#fff',
+                  boxShadow: '0 0 16px rgba(234,88,12,0.4)',
+                }}>✦</div>
+                <span style={{
+                  fontFamily: 'var(--font-display)', fontWeight: 800,
+                  fontSize: 18, color: 'var(--color-cream)', whiteSpace: 'nowrap',
+                }}>Botify</span>
+              </Link>
+              <button onClick={() => setCollapsed(true)} style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--color-muted)', display: 'flex', padding: 4,
+                transition: 'color 0.2s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-cream)')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-muted)')}
+              >
+                <PanelLeftClose size={18} />
+              </button>
+            </>
           )}
+
+          {/* If collapsed, show logo or open button on hover */}
           {collapsed && (
-            <button onClick={() => setCollapsed(false)} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--color-muted)', display: 'flex', padding: 4,
-              position: 'absolute', top: 20, left: 22,
-            }}>
-              <PanelLeft size={18} />
-            </button>
+            isHeaderHovered ? (
+              <button
+                onClick={() => {
+                  setCollapsed(false)
+                  setIsHeaderHovered(false)
+                }}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--color-cream)', display: 'flex', padding: 8,
+                  alignItems: 'center', justifyContent: 'center',
+                  borderRadius: 6,
+                  backgroundColor: 'var(--dash-card-hover)',
+                  transition: 'all 0.18s ease',
+                }}
+              >
+                <PanelLeft size={18} />
+              </button>
+            ) : (
+              <Link to="/dashboard" style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                textDecoration: 'none',
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+                  background: 'linear-gradient(135deg, #ea580c, #fb923c)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16, color: '#fff',
+                  boxShadow: '0 0 16px rgba(234,88,12,0.4)',
+                }}>✦</div>
+              </Link>
+            )
           )}
         </div>
 
