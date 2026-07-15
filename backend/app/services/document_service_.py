@@ -335,13 +335,43 @@ def _chunk_quality_ok(chunks: list[dict]) -> bool:
         return False
     avg_words = sum(len(c["text"].split()) for c in chunks) / len(chunks)
     return (
-        3 <= len(chunks) <= 150   # reasonable number
+        3 <= len(chunks) <= 250   # reasonable number
         and avg_words >= 20        # not heading-only chunks
         and avg_words <= 400       # not massive walls of text
     )
 
 
 async def smart_chunk(text: str) -> list[dict]:
+    # If the text is very long, divide it into smaller parts to prevent OOM
+    part_size = 45000  # ~7,000 words per part
+    if len(text) > part_size:
+        print(f" 📦 Document size ({len(text)} chars) is large. Processing in parts...")
+        parts = []
+        current_part = []
+        current_len = 0
+        for paragraph in text.split("\n"):
+            current_part.append(paragraph)
+            current_len += len(paragraph) + 1
+            if current_len >= part_size:
+                parts.append("\n".join(current_part))
+                current_part = []
+                current_len = 0
+        if current_part:
+            parts.append("\n".join(current_part))
+            
+        all_chunks = []
+        for idx, part in enumerate(parts):
+            if not part.strip():
+                continue
+            print(f"   Processing part {idx+1}/{len(parts)}...")
+            part_chunks = await _smart_chunk_single(part)
+            all_chunks.extend(part_chunks)
+        return all_chunks
+    else:
+        return await _smart_chunk_single(text)
+
+
+async def _smart_chunk_single(text: str) -> list[dict]:
     """
     Routes to the right level:
     Structured doc → Level 3 (structure) → Level 2 fallback
@@ -455,22 +485,36 @@ async def upload_document(
         # Smart routing across levels
         chunks = await smart_chunk(raw_text)
 
-        # Embed document chunks (is_query=False — no BGE prefix)
-        texts_to_embed = [c["text"] for c in chunks]
-        embeddings     = await embed_texts(texts_to_embed, is_query=False)
-        embeddings     = [normalize_embedding(e) for e in embeddings]
-
-        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-            db_chunk = DocumentChunk(
-                content=chunk["text"],
-                chunk_index=i,
-                filename=file.filename,
-                embedding=embedding,
-                document_id=document.id,
-                chatbot_id=chatbot_id,
-                tenant_id=tenant.id,
-            )
-            db.add(db_chunk)
+        # Batch size for database commit & embedding
+        chunk_batch_size = 20
+        total_chunks = len(chunks)
+        
+        for i in range(0, total_chunks, chunk_batch_size):
+            batch_chunks = chunks[i : i + chunk_batch_size]
+            batch_texts = [c["text"] for c in batch_chunks]
+            
+            # Embed just this batch
+            batch_embeddings = await embed_texts(batch_texts, is_query=False)
+            
+            # Save this batch to DB
+            for j, (chunk, embedding) in enumerate(zip(batch_chunks, batch_embeddings)):
+                db_chunk = DocumentChunk(
+                    content=chunk["text"],
+                    chunk_index=i + j,
+                    filename=file.filename,
+                    embedding=normalize_embedding(embedding),
+                    document_id=document.id,
+                    chatbot_id=chatbot_id,
+                    tenant_id=tenant.id,
+                )
+                db.add(db_chunk)
+            
+            # Commit this batch to database to free memory
+            await db.commit()
+            
+            # Garbage collect to avoid RAM build-up
+            import gc
+            gc.collect()
 
         document.status      = DocumentStatus.READY
         document.chunk_count = len(chunks)
