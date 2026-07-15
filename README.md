@@ -6,27 +6,47 @@ Botify is a premium, multi-tenant AI Chatbot SaaS platform that allows businesse
 
 ## Application Screenshots
 
-*Replace these placeholders with your actual screenshots to showcase the application on GitHub.*
 
 ### 1. Interactive 3D Landing Page
-> *A preview of the dark-themed landing page featuring a floating interactive 3D Bot canvas.*
-> 
-> `[Insert 3D Landing Page Screenshot Here]`
+
+> <img width="1891" height="1027" alt="image" src="https://github.com/user-attachments/assets/e578a22c-b884-47d0-8227-35e560e171b8" />
+
+> <img width="1702" height="1017" alt="image" src="https://github.com/user-attachments/assets/45dac1b7-832a-4d1c-b793-74d081fbf24e" />
+
+> <img width="1790" height="1001" alt="image" src="https://github.com/user-attachments/assets/66c1f74c-52e5-4a09-8282-8d9dbb10ed76" />
+
 
 ### 2. Multi-Tenant Dashboard
-> *The central workspace displaying active chatbots, token usage stats, and overall tenant account limits.*
-> 
-> `[Insert Dashboard Overview Screenshot Here]`
+
+> <img width="1912" height="1002" alt="image" src="https://github.com/user-attachments/assets/30006075-d2d0-4710-a80d-540a8d936a86" />
+
+> <img width="1912" height="1025" alt="image" src="https://github.com/user-attachments/assets/66657fc0-fc2f-482d-ae61-3074bb688dc3" />
+
+
 
 ### 3. Document Processing & Ingestion
-> *The interactive document manager showing selectable files, the progress overlay, and chunking outputs.*
+
+> <img width="1917" height="1012" alt="image" src="https://github.com/user-attachments/assets/97e073ce-27f2-4724-a661-0d9f300d5c8e" />
+
 > 
-> `[Insert Document Upload & Processing Screenshot Here]`
+
 
 ### 4. Interactive Chat Playroom & Playground
-> *Testing trained chatbots in real-time with streaming server-sent responses before publishing.*
+
+> <img width="1906" height="1030" alt="image" src="https://github.com/user-attachments/assets/36db81e8-3fd7-47e1-9b36-fb9901e2da8f" />
 > 
-> `[Insert Chat Playground Screenshot Here]`
+
+
+### 5. Settings For API key change password
+
+> <img width="1892" height="982" alt="image" src="https://github.com/user-attachments/assets/dd3e9c72-ddce-40cf-a37a-5718b1478ad1" />
+
+
+
+### 6. SuperAdmin routes
+
+> <img width="1906" height="1025" alt="image" src="https://github.com/user-attachments/assets/d4a4b830-4375-4648-af45-a1918ef06615" />
+
 
 ---
 
