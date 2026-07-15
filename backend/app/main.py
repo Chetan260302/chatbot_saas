@@ -30,15 +30,7 @@ print("[STARTUP] All imports complete!", flush=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Runs on startup and shutdown."""
-    print("[LIFESPAN] Connecting to database...", flush=True)
-    # DB initialization runs at startup. If it fails, uvicorn will crash and fail the deploy.
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        await conn.execute(text("ALTER TABLE chatbots ADD COLUMN IF NOT EXISTS slug VARCHAR(255) UNIQUE;"))
-        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN DEFAULT FALSE;"))
-        await conn.execute(text("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP WITHOUT TIME ZONE;"))
-        await conn.execute(text("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan_started_at TIMESTAMP WITHOUT TIME ZONE;"))
-    print(f"✅ {settings.APP_NAME} started — {settings.ENVIRONMENT} mode", flush=True)
+    print(f"[LIFESPAN] {settings.APP_NAME} started — {settings.ENVIRONMENT} mode", flush=True)
     yield
     # Shutdown: cleanup if needed
     await engine.dispose()
