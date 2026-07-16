@@ -435,8 +435,8 @@ export default function HeroSection({ theme }: HeroSectionProps) {
         <div ref={hintRef} style={{
           position: 'absolute',
           bottom: 'max(32px, 5vh)',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          left: 0,
+          width: '100%',
           textAlign: 'center',
           zIndex: 5,
           display: 'flex',
@@ -453,8 +453,9 @@ export default function HeroSection({ theme }: HeroSectionProps) {
             fontFamily: 'Plus Jakarta Sans, sans-serif',
             textTransform: 'uppercase',
             letterSpacing: '0.18em',
-            paddingLeft: '0.18em', // Symmetrically offset the right-side letter-spacing to center the text perfectly
             margin: 0,
+            marginRight: '-0.18em',   
+            paddingLeft: 0,           
           }}>
             Explore
           </p>

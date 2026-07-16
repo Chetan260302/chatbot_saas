@@ -67,15 +67,13 @@ export default function BotScene({ scrollProgressRef, theme }: BotSceneProps) {
           decay={2}
         />
 
-        {/* Additional side fill light (light theme only) for better visibility */}
-        {theme === 'light' && (
-          <pointLight
-            position={[1.8, -1.2, 1.0]}
-            intensity={3}
-            color="#fde68a"
-            decay={2}
-          />
-        )}
+        {/* Additional side fill light for better visibility and balanced volume */}
+        <pointLight
+          position={[1.8, -1.2, 1.0]}
+          intensity={theme === 'dark' ? 8 : 3}
+          color={theme === 'dark' ? '#ea580c' : '#fde68a'}
+          decay={2}
+        />
 
         <Float speed={1.4} rotationIntensity={0.07} floatIntensity={0.28}>
           <OrbGroup scrollProgressRef={scrollProgressRef} theme={theme} shadowRef={shadowRef} />
