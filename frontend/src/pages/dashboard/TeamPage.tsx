@@ -138,10 +138,33 @@ export default function TeamPage() {
 
   return (
     <DashboardLayout>
+      <style>{`
+        .team-invite-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr auto auto;
+          gap: 12px;
+          align-items: end;
+        }
+        .team-role-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+        }
+        @media (max-width: 768px) {
+          .team-invite-grid {
+            grid-template-columns: 1fr;
+            align-items: stretch;
+          }
+          .team-role-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
       <div style={{
-        padding: 'clamp(24px, 3vw, 40px)',
+        padding: 'clamp(16px, 3vw, 40px)',
         minHeight: '100%', boxSizing: 'border-box',
         display: 'flex', flexDirection: 'column', gap: '28px',
+        maxWidth: '100%', overflowX: 'hidden',
       }}>
         <PageHeader
           title="Team"
@@ -181,11 +204,7 @@ export default function TeamPage() {
             }}>
               <Mail size={18} color="#a78bfa" /> Invite a team member
             </h3>
-            <form onSubmit={handleInvite} style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr auto auto',
-              gap: 12, alignItems: 'end',
-            }}>
+            <form onSubmit={handleInvite} className="team-invite-grid">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <label style={{
                   fontSize: 11, fontWeight: 600, color: 'var(--color-muted)',
@@ -454,7 +473,7 @@ export default function TeamPage() {
             margin: '0 0 12px', fontSize: 13, fontWeight: 700,
             color: 'var(--color-cream)', fontFamily: 'var(--font-body)',
           }}>Role permissions</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          <div className="team-role-grid">
             {[
               { role: 'Owner', color: ROLE_COLORS.owner, perms: 'Full control — billing, API keys, delete tenant, manage all members' },
               { role: 'Admin', color: ROLE_COLORS.admin, perms: 'Create/edit chatbots, upload docs, invite members. No billing or API key access.' },

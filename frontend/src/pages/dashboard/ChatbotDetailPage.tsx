@@ -73,7 +73,7 @@ export default function ChatbotDetailPage() {
   return (
     <DashboardLayout>
       <div style={{
-        padding: 'clamp(24px, 3vw, 40px)',
+        padding: 'clamp(16px, 3vw, 40px)',
         display: 'flex',
         flexDirection: 'column',
         gap: '24px',
@@ -147,7 +147,7 @@ export default function ChatbotDetailPage() {
           </div>
 
           {/* Quick embed buttons */}
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <Link
               to="/docs"
               style={{
@@ -188,6 +188,7 @@ export default function ChatbotDetailPage() {
           display: 'flex', gap: 4,
           background: 'var(--dash-sidebar)', border: '1px solid var(--dash-card-border)',
           borderRadius: 'var(--radius-md)', padding: 4, width: 'fit-content',
+          maxWidth: '100%', overflowX: 'auto', whiteSpace: 'nowrap',
         }}>
           {([
             { id: 'documents', label: 'Documents', icon: FileText },

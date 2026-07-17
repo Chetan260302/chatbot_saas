@@ -7,7 +7,7 @@ import { authAPI } from '../../api/auth'
 import {
   LayoutDashboard, Bot, BarChart3, Settings,
   LogOut, Sun, Moon, PanelLeftClose, PanelLeft, BookOpen,
-  Building2, Users, Shield,
+  Building2, Users, Shield, Menu, X
 } from 'lucide-react'
 
 const NAV = [
@@ -33,6 +33,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [collapsed, setCollapsed] = useState(false)
   const [isHeaderHovered, setIsHeaderHovered] = useState(false)
   const [usage, setUsage] = useState<any | null>(null)
+  
+  // Mobile responsiveness
+  const [isMobile, setIsMobile] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   // Sync user profile on mount to handle DB updates immediately
   useEffect(() => {
@@ -49,16 +53,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .catch(() => {})
   }, [])
 
+  // Handle window resize for mobile detection
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const dark = theme === 'dark'
-  const sidebarWidth = collapsed ? 64 : 240
+  
+  // On mobile, sidebar is never "collapsed" icon-only, it's either fully open or completely hidden.
+  const effectiveCollapsed = isMobile ? false : collapsed
+  const sidebarWidth = effectiveCollapsed ? 64 : (isMobile ? 280 : 240)
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
+  // Close sidebar on mobile when navigating
+  const onNavClick = () => {
+    if (isMobile) setMobileOpen(false)
+  }
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--dash-bg)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--dash-bg)', maxWidth: '100vw', overflowX: 'hidden' }}>
+
+      {/* ── Mobile Overlay Backdrop ── */}
+      {isMobile && mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 999,
+          }}
+        />
+      )}
 
       {/* ── Sidebar (Fixed Position to avoid layout displacement) ── */}
       <aside style={{
@@ -68,12 +102,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         borderRight: '1px solid var(--dash-card-border)',
         display:    'flex',
         flexDirection: 'column',
-        transition: 'width 0.25s ease',
+        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         position:   'fixed',
-        left:       0,
+        left:       isMobile ? (mobileOpen ? 0 : -sidebarWidth) : 0,
         top:        0,
         bottom:     0,
-        zIndex:     100,
+        zIndex:     1000,
         boxSizing:  'border-box',
       }}>
 
@@ -86,7 +120,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             borderBottom: '1px solid var(--dash-card-border)',
             display:      'flex',
             alignItems:   'center',
-            justifyContent: collapsed ? 'center' : 'space-between',
+            justifyContent: effectiveCollapsed ? 'center' : 'space-between',
             gap:          10,
             position:     'relative',
             height:       73,
@@ -94,9 +128,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}
         >
           {/* If NOT collapsed, show logo and close button normally */}
-          {!collapsed && (
+          {!effectiveCollapsed && (
             <>
-              <Link to="/dashboard" style={{
+              <Link to="/dashboard" onClick={onNavClick} style={{
                 display: 'flex', alignItems: 'center', gap: 10,
                 textDecoration: 'none',
               }}>
@@ -112,21 +146,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   fontSize: 18, color: 'var(--color-cream)', whiteSpace: 'nowrap',
                 }}>Botify</span>
               </Link>
-              <button onClick={() => setCollapsed(true)} style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--color-muted)', display: 'flex', padding: 4,
-                transition: 'color 0.2s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-cream)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-muted)')}
-              >
-                <PanelLeftClose size={18} />
-              </button>
+              {isMobile ? (
+                <button onClick={() => setMobileOpen(false)} style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--color-muted)', display: 'flex', padding: 4,
+                }}>
+                  <X size={20} />
+                </button>
+              ) : (
+                <button onClick={() => setCollapsed(true)} style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--color-muted)', display: 'flex', padding: 4,
+                  transition: 'color 0.2s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-cream)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-muted)')}
+                >
+                  <PanelLeftClose size={18} />
+                </button>
+              )}
             </>
           )}
 
           {/* If collapsed, show logo or open button on hover */}
-          {collapsed && (
+          {effectiveCollapsed && (
             isHeaderHovered ? (
               <button
                 onClick={() => {
@@ -145,7 +188,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <PanelLeft size={18} />
               </button>
             ) : (
-              <Link to="/dashboard" style={{
+              <Link to="/dashboard" onClick={onNavClick} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 textDecoration: 'none',
               }}>
@@ -175,13 +218,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.href}
                 to={item.href}
-                title={collapsed ? item.label : undefined}
+                onClick={onNavClick}
+                title={effectiveCollapsed ? item.label : undefined}
                 style={{
                   display:    'flex',
                   alignItems: 'center',
                   gap:        10,
-                  padding:    collapsed ? '10px 0' : '10px 12px',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  padding:    effectiveCollapsed ? '10px 0' : '10px 12px',
+                  justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
                   borderRadius: 'var(--radius-sm)',
                   textDecoration: 'none',
                   color:      active ? 'var(--color-cream)' : 'var(--color-muted)',
@@ -199,7 +243,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 }}
               >
                 <Icon size={18} strokeWidth={active ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
-                {!collapsed && (
+                {!effectiveCollapsed && (
                   <span style={{
                     fontSize: 14, fontWeight: active ? 600 : 400,
                     fontFamily: 'var(--font-body)',
@@ -218,9 +262,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div style={{
                 height: 1,
                 background: 'var(--dash-card-border)',
-                margin: collapsed ? '8px 8px' : '8px 12px',
+                margin: effectiveCollapsed ? '8px 8px' : '8px 12px',
               }} />
-              {!collapsed && (
+              {!effectiveCollapsed && (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '4px 12px 6px',
@@ -240,13 +284,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Link
                     key={item.href}
                     to={item.href}
-                    title={collapsed ? item.label : undefined}
+                    onClick={onNavClick}
+                    title={effectiveCollapsed ? item.label : undefined}
                     style={{
                       display:    'flex',
                       alignItems: 'center',
                       gap:        10,
-                      padding:    collapsed ? '10px 0' : '10px 12px',
-                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      padding:    effectiveCollapsed ? '10px 0' : '10px 12px',
+                      justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
                       borderRadius: 'var(--radius-sm)',
                       textDecoration: 'none',
                       color:      active ? '#9637fbff' : '#a78bfa',
@@ -264,7 +309,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     }}
                   >
                     <Icon size={18} strokeWidth={active ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
-                    {!collapsed && (
+                    {!effectiveCollapsed && (
                       <span style={{
                         fontSize: 14, fontWeight: active ? 600 : 400,
                         fontFamily: 'var(--font-body)',
@@ -290,9 +335,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             onClick={toggleTheme}
             title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
             style={{
-              width: '100%', padding: collapsed ? '9px 0' : '9px 12px',
+              width: '100%', padding: effectiveCollapsed ? '9px 0' : '9px 12px',
               display: 'flex', alignItems: 'center', gap: 10,
-              justifyContent: collapsed ? 'center' : 'flex-start',
+              justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
               background: 'transparent', border: 'none',
               color: 'var(--color-muted)',
               fontSize: 13, cursor: 'pointer',
@@ -306,11 +351,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               ? <Sun size={18} strokeWidth={1.8} style={{ flexShrink: 0 }} />
               : <Moon size={18} strokeWidth={1.8} style={{ flexShrink: 0 }} />
             }
-            {!collapsed && (dark ? 'Light mode' : 'Dark mode')}
+            {!effectiveCollapsed && (dark ? 'Light mode' : 'Dark mode')}
           </button>
 
           {/* User info */}
-          {!collapsed && user && (
+          {!effectiveCollapsed && user && (
             <div style={{
               padding: '10px 12px',
               background: 'var(--dash-card-hover)',
@@ -343,7 +388,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
 
           {/* Plan badge */}
-          {!collapsed && usage && (
+          {!effectiveCollapsed && usage && (
             <div style={{
               padding: '6px 12px 10px',
               fontFamily: 'var(--font-body)',
@@ -362,9 +407,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Logout */}
           <button onClick={handleLogout} title="Sign out" style={{
-            width: '100%', padding: collapsed ? '9px 0' : '9px 12px',
+            width: '100%', padding: effectiveCollapsed ? '9px 0' : '9px 12px',
             display: 'flex', alignItems: 'center', gap: 10,
-            justifyContent: collapsed ? 'center' : 'flex-start',
+            justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
             background: 'transparent', border: 'none',
             color: 'var(--color-subtle)',
             fontSize: 13, cursor: 'pointer',
@@ -375,7 +420,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-subtle)')}
           >
             <LogOut size={18} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-            {!collapsed && 'Sign out'}
+            {!effectiveCollapsed && 'Sign out'}
           </button>
         </div>
 
@@ -384,12 +429,58 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ── Main content (Offsets the fixed sidebar width) ── */}
       <main style={{
         flex: 1,
+        minWidth: 0,
         minHeight: '100vh',
-        marginLeft: sidebarWidth,
+        marginLeft: isMobile ? 0 : sidebarWidth,
         transition: 'margin-left 0.25s ease',
         boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
       }}>
-        {children}
+        {/* Mobile Header */}
+        {isMobile && (
+          <header style={{
+            height: 60,
+            borderBottom: '1px solid var(--dash-card-border)',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 16px',
+            gap: 16,
+            background: 'var(--dash-bg)',
+            position: 'sticky',
+            top: 0,
+            zIndex: 900,
+          }}>
+            <button
+              onClick={() => setMobileOpen(true)}
+              style={{
+                background: 'none', border: 'none', color: 'var(--color-cream)',
+                padding: 4, cursor: 'pointer', display: 'flex'
+              }}
+            >
+              <Menu size={24} />
+            </button>
+            <Link to="/dashboard" style={{
+              display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none'
+            }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: 8,
+                background: 'linear-gradient(135deg, #ea580c, #fb923c)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14, color: '#fff',
+                boxShadow: '0 0 12px rgba(234,88,12,0.4)',
+              }}>✦</div>
+              <span style={{
+                fontFamily: 'var(--font-display)', fontWeight: 800,
+                fontSize: 18, color: 'var(--color-cream)',
+              }}>Botify</span>
+            </Link>
+          </header>
+        )}
+        
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {children}
+        </div>
       </main>
 
     </div>

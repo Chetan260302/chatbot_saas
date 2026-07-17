@@ -12,9 +12,9 @@ interface HeroSectionProps {
 
 export default function HeroSection({ theme }: HeroSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null)
-  const charRef    = useRef<HTMLDivElement>(null)
-  const textRef    = useRef<HTMLDivElement>(null)
-  const hintRef    = useRef<HTMLDivElement>(null)
+  const charRef = useRef<HTMLDivElement>(null)
+  const textRef = useRef<HTMLDivElement>(null)
+  const hintRef = useRef<HTMLDivElement>(null)
 
   // Initialize scroll progress immediately to 1.76 if loaded with a hash or scroll offset
   const initialProgress = typeof window !== 'undefined' && (window.location.hash || window.scrollY > 50) ? 1.76 : 0.0
@@ -31,10 +31,10 @@ export default function HeroSection({ theme }: HeroSectionProps) {
     if (typeof window === 'undefined') {
       return { orbSize: 520, desktopHeight: '100vh', heroHeight: '100vh' }
     }
-    
+
     const vw = window.innerWidth
     const vh = window.innerHeight
-    
+
     // Mobile (< 640px)
     if (vw < 640) {
       return {
@@ -94,13 +94,13 @@ export default function HeroSection({ theme }: HeroSectionProps) {
         scrollProgressRef.current = 1.0
       }
     }
-    
+
     window.addEventListener('scroll', handleScrollCheck, { passive: true })
     window.addEventListener('hashchange', handleScrollCheck, { passive: true })
-    
+
     // Run initial check
     handleScrollCheck()
-    
+
     return () => {
       window.removeEventListener('scroll', handleScrollCheck)
       window.removeEventListener('hashchange', handleScrollCheck)
@@ -113,7 +113,7 @@ export default function HeroSection({ theme }: HeroSectionProps) {
 
     // Set initial states for elements
     if (charRef.current) {
-      charRef.current.style.width  = `${sizes.orbSize}px`
+      charRef.current.style.width = `${sizes.orbSize}px`
       charRef.current.style.height = `${sizes.orbSize}px`
     }
     gsap.set(charRef.current, { x: 0, y: 0, opacity: 1 })
@@ -149,7 +149,7 @@ export default function HeroSection({ theme }: HeroSectionProps) {
         duration: 1.8,
         ease: 'power3.inOut',
         onUpdate: () => {
-            scrollProgressRef.current = progressObj.value
+          scrollProgressRef.current = progressObj.value
         }
       }, 0)
 
@@ -254,7 +254,7 @@ export default function HeroSection({ theme }: HeroSectionProps) {
       // End: position offsets from the element's natural center (which is viewport center)
       // Visual center vertically aligned to middle (offset y = 0)
       const endX_right = vw / 2 - padding - endVisualSize / 2
-      const endX_left  = padding + endVisualSize / 2 - vw / 2
+      const endX_left = padding + endVisualSize / 2 - vw / 2
       const endY = 0
 
       if (t < 1) {
@@ -293,9 +293,9 @@ export default function HeroSection({ theme }: HeroSectionProps) {
         el.style.zIndex = '150'
 
         // Determine which section is closest to viewport center
-        const features   = document.getElementById('features')
+        const features = document.getElementById('features')
         const howItWorks = document.getElementById('how-it-works')
-        const pricing    = document.getElementById('pricing')
+        const pricing = document.getElementById('pricing')
 
         const getCenterDist = (section: HTMLElement | null) => {
           if (!section) return Infinity
@@ -379,9 +379,9 @@ export default function HeroSection({ theme }: HeroSectionProps) {
           position: 'fixed',
           top: '50%',
           left: '50%',
-          marginTop:  -sizes.orbSize / 2,
+          marginTop: -sizes.orbSize / 2,
           marginLeft: -sizes.orbSize / 2,
-          width:  sizes.orbSize,
+          width: sizes.orbSize,
           height: sizes.orbSize,
           zIndex: 2,
           pointerEvents: 'auto',
@@ -454,8 +454,8 @@ export default function HeroSection({ theme }: HeroSectionProps) {
             textTransform: 'uppercase',
             letterSpacing: '0.18em',
             margin: 0,
-            marginRight: '-0.18em',   
-            paddingLeft: 0,           
+            marginRight: '-0.18em',
+            paddingLeft: 0,
           }}>
             Explore
           </p>

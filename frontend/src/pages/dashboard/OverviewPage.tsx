@@ -119,13 +119,28 @@ export default function OverviewPage() {
 
   return (
     <DashboardLayout>
+      <style>{`
+        .overview-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr);
+          gap: 24px;
+          align-items: start;
+        }
+        @media (max-width: 1024px) {
+          .overview-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
       <div style={{
-        padding: 'clamp(24px, 3vw, 40px)',
+        padding: 'clamp(16px, 3vw, 40px)',
         minHeight: '100%',
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
         gap: '28px',
+        maxWidth: '100%',
+        overflowX: 'hidden',
       }}>
         {/* Header */}
         <PageHeader
@@ -170,14 +185,9 @@ export default function OverviewPage() {
         </div>
 
         {/* Main Content Layout */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 0.6fr)',
-          gap: '24px',
-          alignItems: 'start',
-        }}>
+        <div className="overview-grid" style={{ maxWidth: '100%' }}>
           {/* Left: Chatbot Health Table */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{
                 margin: 0,
@@ -316,7 +326,7 @@ export default function OverviewPage() {
           </div>
 
           {/* Right: Quick Actions */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 }}>
             <h2 style={{
               margin: 0,
               fontSize: 'var(--text-lg)',

@@ -63,8 +63,10 @@ export default function Navbar({
           gap: 10,
           textDecoration: 'none',
         }}
+        className="nav-gap-mobile"
       >
         <div
+          className="nav-logo-icon"
           style={{
             width: 32,
             height: 32,
@@ -81,6 +83,7 @@ export default function Navbar({
           ✦
         </div>
         <span
+          className="nav-logo-text"
           style={{
             fontFamily: 'var(--font-display)',
             fontWeight: 800,
@@ -127,8 +130,9 @@ export default function Navbar({
       </div>
 
       {/* Right side — CTA buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="nav-gap-mobile" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button
+          className="nav-theme-btn"
           onClick={() => toggleTheme()}
           style={{
             width: 42,
@@ -150,6 +154,7 @@ export default function Navbar({
           <>
             <Link
               to="/dashboard"
+              className="nav-btn-text"
               style={{
                 color: isDark ? '#fb923c' : '#ea580c',
                 fontSize: 14,
@@ -161,6 +166,7 @@ export default function Navbar({
               Dashboard
             </Link>
             <button
+              className="nav-btn-text"
               onClick={() => {
                 logout()
                 window.location.href = '/'
@@ -185,6 +191,7 @@ export default function Navbar({
           <>
             <Link
               to="/login"
+              className="nav-cta-desktop"
               style={{
                 color: isDark ? '#a8826a' : '#57534e',
                 fontSize: 14,
@@ -204,6 +211,7 @@ export default function Navbar({
 
             <Link
               to="/register"
+              className="nav-cta-desktop"
               style={{
                 background: '#ea580c',
                 color: '#fff7ed',
@@ -371,7 +379,14 @@ export default function Navbar({
       <style>{`
         @media (max-width: 768px) {
           .nav-links-desktop { display: none !important; }
+          .nav-cta-desktop { display: none !important; }
           .hamburger { display: block !important; }
+          
+          .nav-gap-mobile { gap: 6px !important; }
+          .nav-logo-text { font-size: 16px !important; }
+          .nav-logo-icon { width: 24px !important; height: 24px !important; font-size: 12px !important; }
+          .nav-btn-text { font-size: 12px !important; padding: 6px 10px !important; }
+          .nav-theme-btn { width: 32px !important; height: 32px !important; font-size: 14px !important; }
         }
       `}</style>
     </nav>

@@ -149,8 +149,9 @@ export default function AnalyticsPage() {
   return (
     <DashboardLayout>
       <div style={{
-        padding: 'clamp(24px, 3vw, 40px)',
+        padding: 'clamp(16px, 3vw, 40px)',
         display: 'flex', flexDirection: 'column', gap: 28,
+        maxWidth: '100%', boxSizing: 'border-box', overflowX: 'hidden',
       }}>
         <PageHeader
           title="Analytics"
@@ -194,7 +195,8 @@ export default function AnalyticsPage() {
                   fontFamily: 'var(--font-body)',
                   outline: 'none',
                   cursor: 'pointer',
-                  minWidth: 150,
+                  minWidth: 0,
+                  flex: 1,
                 }}
               >
                 <option value={7}>Last 7 days</option>
@@ -232,7 +234,8 @@ export default function AnalyticsPage() {
                     fontFamily: 'var(--font-body)',
                     outline: 'none',
                     cursor: 'pointer',
-                    minWidth: 180,
+                    minWidth: 0,
+                    flex: 1,
                   }}
                 >
                   <option value="">All tenants (Aggregate)</option>
@@ -270,7 +273,8 @@ export default function AnalyticsPage() {
                   fontFamily: 'var(--font-body)',
                   outline: 'none',
                   cursor: 'pointer',
-                  minWidth: 180,
+                  minWidth: 0,
+                  flex: 1,
                 }}
               >
                 <option value="">All chatbots (Aggregate)</option>
@@ -287,7 +291,7 @@ export default function AnalyticsPage() {
         {/* Stat cards */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
           gap: 16,
         }}>
           <StatCard
@@ -343,64 +347,66 @@ export default function AnalyticsPage() {
                 }} />
               </div>
             ) : (
-              <div>
-                {/* Chart */}
-                <div style={{
-                  display: 'flex', alignItems: 'flex-end', gap: 6,
-                  height: 180, width: '100%',
-                }}>
-                  {data?.messages_by_day.map((day) => {
-                    const heightPct = maxDayCount > 0 ? (day.count / maxDayCount) * 100 : 0
-                    return (
-                      <div
-                        key={day.date}
-                        style={{
-                          flex: 1, display: 'flex', flexDirection: 'column',
-                          alignItems: 'center', gap: 4, height: '100%',
-                          justifyContent: 'flex-end',
-                        }}
-                        title={`${formatDate(day.date)}: ${day.count} messages`}
-                      >
-                        {/* Count label on top of bar */}
-                        {day.count > 0 && (
-                          <span style={{
-                            fontSize: 9, fontWeight: 600,
-                            color: 'var(--color-muted)', fontFamily: 'var(--font-body)',
-                            fontVariantNumeric: 'tabular-nums',
-                          }}>{day.count}</span>
-                        )}
-                        {/* Bar */}
-                        <div style={{
-                          width: '100%',
-                          minHeight: day.count > 0 ? 4 : 2,
-                          height: `${Math.max(heightPct, day.count > 0 ? 3 : 1)}%`,
-                          background: day.count > 0
-                            ? 'linear-gradient(to top, #ea580c, #fb923c)'
-                            : 'var(--dash-card-border)',
-                          borderRadius: '4px 4px 0 0',
-                          transition: 'height 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                          opacity: day.count > 0 ? 1 : 0.4,
-                        }} />
+              <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
+                <div style={{ minWidth: data?.messages_by_day.length ? data.messages_by_day.length * 20 : 0 }}>
+                  {/* Chart */}
+                  <div style={{
+                    display: 'flex', alignItems: 'flex-end', gap: 6,
+                    height: 180, width: '100%',
+                  }}>
+                    {data?.messages_by_day.map((day) => {
+                      const heightPct = maxDayCount > 0 ? (day.count / maxDayCount) * 100 : 0
+                      return (
+                        <div
+                          key={day.date}
+                          style={{
+                            flex: 1, display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', gap: 4, height: '100%',
+                            justifyContent: 'flex-end',
+                          }}
+                          title={`${formatDate(day.date)}: ${day.count} messages`}
+                        >
+                          {/* Count label on top of bar */}
+                          {day.count > 0 && (
+                            <span style={{
+                              fontSize: 9, fontWeight: 600,
+                              color: 'var(--color-muted)', fontFamily: 'var(--font-body)',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}>{day.count}</span>
+                          )}
+                          {/* Bar */}
+                          <div style={{
+                            width: '100%',
+                            minHeight: day.count > 0 ? 4 : 2,
+                            height: `${Math.max(heightPct, day.count > 0 ? 3 : 1)}%`,
+                            background: day.count > 0
+                              ? 'linear-gradient(to top, #ea580c, #fb923c)'
+                              : 'var(--dash-card-border)',
+                            borderRadius: '4px 4px 0 0',
+                            transition: 'height 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                            opacity: day.count > 0 ? 1 : 0.4,
+                          }} />
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {/* X-axis labels */}
+                  <div style={{
+                    display: 'flex', gap: 6, marginTop: 8,
+                    borderTop: '1px solid var(--dash-card-border)', paddingTop: 8,
+                  }}>
+                    {data?.messages_by_day.map((day, i) => (
+                      <div key={day.date} style={{
+                        flex: 1, textAlign: 'center',
+                        fontSize: 9, color: 'var(--color-muted)',
+                        fontFamily: 'var(--font-body)',
+                        whiteSpace: 'nowrap', overflow: 'hidden',
+                      }}>
+                        {/* Show every other label to avoid crowding */}
+                        {i % 2 === 0 ? formatDate(day.date) : ''}
                       </div>
-                    )
-                  })}
-                </div>
-                {/* X-axis labels */}
-                <div style={{
-                  display: 'flex', gap: 6, marginTop: 8,
-                  borderTop: '1px solid var(--dash-card-border)', paddingTop: 8,
-                }}>
-                  {data?.messages_by_day.map((day, i) => (
-                    <div key={day.date} style={{
-                      flex: 1, textAlign: 'center',
-                      fontSize: 9, color: 'var(--color-muted)',
-                      fontFamily: 'var(--font-body)',
-                      whiteSpace: 'nowrap', overflow: 'hidden',
-                    }}>
-                      {/* Show every other label to avoid crowding */}
-                      {i % 2 === 0 ? formatDate(day.date) : ''}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
